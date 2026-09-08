@@ -15,8 +15,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$PLUGIN_DIR/.env"
-OUTPUT_DIR="$SCRIPT_DIR/results/$(date +%Y%m%d_%H%M%S)"
+OUTPUT_DIR="$SCRIPT_DIR/results/$(date +%Y%m%d_%H%M%S)${SMOKETEST_MODEL:+_$SMOKETEST_MODEL}"
 SINGLE_TEST="${1:-}"
+# Evaluator model. Set SMOKETEST_MODEL=sonnet|opus|<model id>; empty uses the CLI default.
+MODEL="${SMOKETEST_MODEL:-}"
+MODEL_FLAGS=()
+if [[ -n "$MODEL" ]]; then MODEL_FLAGS+=(--model "$MODEL"); fi
 
 FOLLOWUP_PROMPT="Now reflect on the task you just completed. Based on your experience using the MCP tools and skills in this session:
 
@@ -30,7 +34,7 @@ Be concrete and specific — reference actual tool calls, error messages, and qu
 
 HALLUCINATION_CHECK_PROMPT="I want you to check for each of the companies/entities/patents you mentioned if they really exist or if you hallucinated them. For each one, verify by searching the patent database again. Report a table with: entity name, claimed count, verified count, and whether the verification passed or failed."
 
-ALLOWED_TOOLS="mcp__plugin_ops-patent-search_ops-patent-search__search_patents,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_details,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_claims,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_description,mcp__plugin_ops-patent-search_ops-patent-search__search_in_patent_text,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_family,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_legal_status,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_citations,Read,Write,Edit,Grep,Glob,Bash,WebSearch,WebFetch,Skill,Agent"
+ALLOWED_TOOLS="mcp__plugin_ops-patent-search_ops-patent-search__search_patents,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_details,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_claims,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_description,mcp__plugin_ops-patent-search_ops-patent-search__search_in_patent_text,mcp__plugin_ops-patent-search_ops-patent-search__search_and_filter_fulltext,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_family,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_legal_status,mcp__plugin_ops-patent-search_ops-patent-search__get_patent_citations,Read,Write,Edit,Grep,Glob,Bash,WebSearch,WebFetch,Skill,Agent"
 
 # ── Load credentials ────────────────────────────────────────────────────────
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -159,6 +163,7 @@ for test_entry in "${TESTS[@]}"; do
     --allowedTools "$ALLOWED_TOOLS" \
     --output-format stream-json \
     --session-id "$SESSION_ID" \
+    "${MODEL_FLAGS[@]}" \
     "${LIMIT_FLAGS[@]}" \
     --verbose \
     > "$task_stream" 2>&1; then
@@ -203,6 +208,7 @@ for line in sys.stdin:
     --plugin-dir "$PLUGIN_DIR" \
     --allowedTools "$ALLOWED_TOOLS" \
     --output-format stream-json \
+    "${MODEL_FLAGS[@]}" \
     --verbose \
     > "$hallu_stream" 2>&1; then
 
@@ -222,6 +228,7 @@ for line in sys.stdin:
   if CLAUDECODE= claude -p "$FOLLOWUP_PROMPT" \
     --resume "$SESSION_ID" \
     --output-format stream-json \
+    "${MODEL_FLAGS[@]}" \
     --max-turns 1 \
     --verbose \
     > "$feedback_stream" 2>&1; then

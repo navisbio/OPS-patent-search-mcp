@@ -1,6 +1,6 @@
 {
   "name": "ops-patent-search",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Search and retrieve patents from Espacenet via the EPO Open Patent Services API. Supports CQL search, bibliographic data, paginated full-text reading, keyword search within patents, patent family lookup, legal status, and citation analysis.",
   "author": {
     "name": "Navis Bio",

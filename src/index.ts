@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Patent Search MCP Server v1.0.0
+ * Patent Search MCP Server v1.0.1
  *
  * Patent search and retrieval via EPO Open Patent Services (OPS) API.
  * Designed for agentic use: keyword search + paginated reading prevent
@@ -208,7 +208,7 @@ async function fetchWithFamilyFallback(
 
 const server = new McpServer({
   name: "ops-patent-search",
-  version: "1.0.0",
+  version: "1.0.1",
 });
 
 /* --- search helpers --- */
@@ -1767,7 +1767,7 @@ To find forward citations — patents that cite a given document — use search_
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Patent Search MCP server v1.0.0 running on stdio");
+  console.error("Patent Search MCP server v1.0.1 running on stdio");
 }
 
 main().catch((e) => {

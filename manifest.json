@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "ops-patent-search",
   "display_name": "Patent Search",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Search and retrieve patents via the EPO Open Patent Services (OPS) API. Supports CQL search with exhaustive pagination, landscape analytics, bibliographic data, paginated full-text reading, keyword search within patents, patent family lookup, legal status, and citations.",
   "long_description": "Access the global patent database directly from Claude via the EPO Open Patent Services API. Search millions of patents using CQL query syntax with tiered detail levels (summary landscape stats, compact listings, or full bibliographic data). Exhaustive retrieval via auto-pagination with automatic year-decomposition bypasses the 2000-result API cap. Read paginated claims and descriptions, search for keywords within patent full text, look up patent families across jurisdictions, check legal status (granted/lapsed/withdrawn), and trace prior art via backward citations. Designed for agentic patent research: keyword search, pagination, and progressive detail levels prevent context overflow while enabling comprehensive landscape analysis.",
   "author": {
