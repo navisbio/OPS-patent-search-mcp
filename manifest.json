@@ -1,0 +1,80 @@
+{
+  "manifest_version": "0.3",
+  "name": "ops-patent-search",
+  "display_name": "Patent Search",
+  "version": "0.3.0",
+  "description": "Search and retrieve patents via the EPO Open Patent Services (OPS) API. Supports CQL search with exhaustive pagination, landscape analytics, bibliographic data, paginated full-text reading, keyword search within patents, patent family lookup, legal status, and citations.",
+  "long_description": "Access the global patent database directly from Claude via the EPO Open Patent Services API. Search millions of patents using CQL query syntax with tiered detail levels (summary landscape stats, compact listings, or full bibliographic data). Exhaustive retrieval via auto-pagination with automatic year-decomposition bypasses the 2000-result API cap. Read paginated claims and descriptions, search for keywords within patent full text, look up patent families across jurisdictions, check legal status (granted/lapsed/withdrawn), and trace prior art via backward citations. Designed for agentic patent research: keyword search, pagination, and progressive detail levels prevent context overflow while enabling comprehensive landscape analysis.",
+  "author": {
+    "name": "Navis Bio",
+    "url": "https://github.com/navisbio"
+  },
+  "homepage": "https://github.com/navisbio/OPS-patent-search-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/navisbio/OPS-patent-search-mcp"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "server/bundle.cjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/bundle.cjs"],
+      "env": {
+        "PATENT_CONSUMER_KEY": "${user_config.PATENT_CONSUMER_KEY}",
+        "PATENT_CONSUMER_SECRET_KEY": "${user_config.PATENT_CONSUMER_SECRET_KEY}"
+      }
+    }
+  },
+  "user_config": {
+    "PATENT_CONSUMER_KEY": {
+      "type": "string",
+      "title": "EPO OPS Consumer Key",
+      "description": "Your Consumer Key from the EPO Open Patent Services developer portal (developers.epo.org). Required to authenticate API requests.",
+      "required": true,
+      "sensitive": true
+    },
+    "PATENT_CONSUMER_SECRET_KEY": {
+      "type": "string",
+      "title": "EPO OPS Consumer Secret",
+      "description": "Your Consumer Secret from the EPO Open Patent Services developer portal (developers.epo.org). Required to authenticate API requests.",
+      "required": true,
+      "sensitive": true
+    }
+  },
+  "tools": [
+    {
+      "name": "search_patents",
+      "description": "Search the global patent database using CQL query syntax. Supports count_only, detail_level (full/compact/summary), auto_paginate with year-decomposition for >2000 results, and landscape analytics (top applicants, year distribution, classifications)."
+    },
+    {
+      "name": "get_patent_details",
+      "description": "Retrieve full details for a specific patent: title, abstract, applicants, inventors, classifications, dates, and priority claims. Supports batch mode (up to 100 patents per call)."
+    },
+    {
+      "name": "get_patent_claims",
+      "description": "Read the claims of a patent with pagination. Automatically falls back to an EP/WO family equivalent if the requested document lacks full text."
+    },
+    {
+      "name": "get_patent_description",
+      "description": "Read the description/specification of a patent with pagination. Automatically falls back to an EP/WO family equivalent if needed."
+    },
+    {
+      "name": "search_in_patent_text",
+      "description": "Search for keywords within the full text of a patent (claims + description). Returns matching snippets with sectionOffset for targeted reading via get_patent_claims or get_patent_description."
+    },
+    {
+      "name": "get_patent_family",
+      "description": "Get all INPADOC patent family members across jurisdictions."
+    },
+    {
+      "name": "get_patent_legal_status",
+      "description": "Get the legal event history for a patent with a statusSummary (granted, lapsed, oppositionFiled, spcOrPte flags, lapsedStates, activeStates for EP contracting state coverage) plus full INPADOC event list with contracting state codes, effective dates, and free text details."
+    },
+    {
+      "name": "get_patent_citations",
+      "description": "Get backward citations (prior art references) cited within a patent, split into patent and non-patent literature."
+    }
+  ]
+}

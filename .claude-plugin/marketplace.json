@@ -1,0 +1,22 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "ops-patent-search",
+  "owner": {
+    "name": "Navis Bio",
+    "url": "https://github.com/navisbio"
+  },
+  "plugins": [
+    {
+      "name": "ops-patent-search",
+      "source": "./",
+      "description": "Patent search and retrieval via Espacenet / EPO Open Patent Services",
+      "skills": [
+        "./skills/prior-art-search",
+        "./skills/fto-analysis",
+        "./skills/citation-network",
+        "./skills/patent-landscape",
+        "./skills/loe-analysis"
+      ]
+    }
+  ]
+}

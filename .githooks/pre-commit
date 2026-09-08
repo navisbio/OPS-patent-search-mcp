@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+#
+# Blocks commits that would publish local-only or confidential material.
+#
+# .gitignore alone is not enough: it does not stop `git add -f`, and it has no
+# effect on a file that is already tracked. This hook checks what is actually
+# staged, so both routes are covered.
+#
+# Enable (once per clone):
+#     git config core.hooksPath .githooks
+#
+# Deliberate override for a single commit:
+#     ALLOW_SENSITIVE=1 git commit ...
+#
+set -uo pipefail
+
+if [[ "${ALLOW_SENSITIVE:-0}" == "1" ]]; then
+  echo "pre-commit: sensitive-content checks skipped (ALLOW_SENSITIVE=1)" >&2
+  exit 0
+fi
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[[ -z "$staged" ]] && exit 0
+
+fail=0
+report() { echo "  ✗ $1" >&2; fail=1; }
+
+# ── 1. Paths that must never be committed ────────────────────────────────────
+# .claude-plugin/ is intentionally absent: it ships with the plugin.
+BLOCKED_PATHS='(^|/)\.env($|\.)|(^|/)\.claude/|(^|/)\.beads/|(^|/)\.dolt/|(^|/)\.conductor/|(^|/)\.cursor/|(^|/)\.idea/|(^|/)\.vscode/|(^|/)\.npmrc$|(^|/)\.netrc$|^docs/|^smoketest/results/|\.mcpb$|\.pem$|\.key$|\.p12$|\.pfx$|\.jsonl$|\.db$|\.sqlite3?$|(^|/)\.DS_Store$|\.local$'
+
+while IFS= read -r f; do
+  [[ -z "$f" ]] && continue
+  if printf '%s' "$f" | grep -qE "$BLOCKED_PATHS"; then
+    report "blocked path staged: $f"
+  fi
+done <<< "$staged"
+
+# ── 2. Credential-shaped content in staged diffs ─────────────────────────────
+# Placeholders such as "${PATENT_CONSUMER_KEY}" are expected and allowed.
+# The hook itself lists the patterns it looks for, so exclude it from the
+# content scans or it would always flag itself.
+added=$(git diff --cached --unified=0 --diff-filter=ACMR -- . ':(exclude).githooks/' \
+          | grep '^+' | grep -v '^+++' || true)
+
+if [[ -n "$added" ]]; then
+  if printf '%s' "$added" | grep -qE 'BEGIN [A-Z ]*PRIVATE KEY'; then
+    report "private key material in staged content"
+  fi
+  # KEY=value / "key": "value" with a long literal secret, ignoring ${VAR} refs
+  if printf '%s' "$added" \
+      | grep -viE '\$\{[A-Za-z_]+\}|process\.env|your_|example|placeholder|<[a-z_]+>' \
+      | grep -qE '(SECRET|TOKEN|PASSWORD|API_?KEY|CONSUMER_KEY|ACCESS_KEY)[A-Z_]*["'"'"']?\s*[:=]\s*["'"'"']?[A-Za-z0-9/+_-]{16,}'; then
+    report "possible hardcoded credential in staged content"
+  fi
+  if printf '%s' "$added" | grep -qE '\b(AKIA|ASIA)[A-Z0-9]{16}\b|\bghp_[A-Za-z0-9]{30,}\b|\bsk-[A-Za-z0-9]{20,}\b'; then
+    report "cloud/service access token in staged content"
+  fi
+fi
+
+# ── 3. Client-identifying terms ──────────────────────────────────────────────
+# Scenario prompts and examples must stay generic. The term list is deliberately
+# NOT stored here: this file is public, and a curated list of client names would
+# itself be the disclosure. Keep it in .githooks/client-terms.local (gitignored),
+# one extended-regex term per line, '#' for comments. Terms are matched
+# word-bounded and case-insensitively, so ordinary words are safe
+# (word-bounded, so a term like "cat" would not fire inside "concatenate").
+TERMS_FILE="$(dirname "$0")/client-terms.local"
+CLIENT_TERMS=""
+if [[ -f "$TERMS_FILE" ]]; then
+  joined=$(grep -vE '^\s*(#|$)' "$TERMS_FILE" | paste -sd '|' -)
+  [[ -n "$joined" ]] && CLIENT_TERMS="\\b(${joined})\\b"
+else
+  echo "pre-commit: note — no $TERMS_FILE, client-term check inactive." >&2
+fi
+
+if [[ -n "$added" && -n "$CLIENT_TERMS" ]] && printf '%s' "$added" | grep -qiE "$CLIENT_TERMS"; then
+  report "client-identifying term in staged content"
+  printf '%s' "$added" | grep -inoiE "$CLIENT_TERMS" | sort -u | head -5 | sed 's/^/      /' >&2
+fi
+
+if [[ $fail -ne 0 ]]; then
+  cat >&2 <<'EOF'
+
+pre-commit: refusing to commit — see above.
+
+  Unstage it:            git restore --staged <file>
+  Intentional and safe:  ALLOW_SENSITIVE=1 git commit ...
+
+EOF
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,17 @@
+src/
+server/
+tests/
+manifest.json
+build-bundle.mjs
+test.js
+tsconfig.json
+.env
+.gitignore
+CLAUDE.md
+.claude-plugin/
+skills/
+commands/
+.mcp.json
+integration_tests/
+*.mcpb
+smoketest/

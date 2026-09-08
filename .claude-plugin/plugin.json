@@ -1,0 +1,13 @@
+{
+  "name": "ops-patent-search",
+  "version": "0.3.0",
+  "description": "Search and retrieve patents from Espacenet via the EPO Open Patent Services API. Supports CQL search, bibliographic data, paginated full-text reading, keyword search within patents, patent family lookup, legal status, and citation analysis.",
+  "author": {
+    "name": "Navis Bio",
+    "url": "https://github.com/navisbio"
+  },
+  "homepage": "https://github.com/navisbio/OPS-patent-search-mcp",
+  "repository": "https://github.com/navisbio/OPS-patent-search-mcp",
+  "license": "MIT",
+  "keywords": ["patents", "espacenet", "EPO", "prior-art", "patent-search", "FTO", "citations", "life-sciences"]
+}

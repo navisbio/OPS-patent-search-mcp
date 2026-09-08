@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────
+# Secrets and credentials — never commit
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.npmrc
+.netrc
+credentials.json
+*credential*
+*secret*
+
+# ─────────────────────────────────────────────────────────────
+# Agent / editor local state — machine-specific, may contain
+# local paths, prompts, transcripts and permission grants.
+# NOTE: .claude-plugin/ is NOT ignored — it ships with the plugin.
+# ─────────────────────────────────────────────────────────────
+.claude/
+.beads/
+.dolt/
+.beads-credential-key
+.githooks/*.local
+.conductor/
+.devcontainer/
+.cursor/
+.aider*
+.continue/
+.idea/
+.vscode/
+
+# ─────────────────────────────────────────────────────────────
+# Local-only working material
+# docs/ holds internal write-ups, client-adjacent analyses and
+# marketing drafts. Keep it local; publish deliberately, never
+# by default.
+# ─────────────────────────────────────────────────────────────
+docs/
+smoketest/results/
+*.jsonl
+*.log
+
+# ─────────────────────────────────────────────────────────────
+# Build output and dependencies
+# ─────────────────────────────────────────────────────────────
+node_modules/
+dist/
+server/
+package-lock.json
+*.mcpb
+test.js
+*.db
+*.sqlite
+*.sqlite3
+
+# ─────────────────────────────────────────────────────────────
+# OS and editor cruft
+# ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+~$*
+*.swp
+*.swo
+*~

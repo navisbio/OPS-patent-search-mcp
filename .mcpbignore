@@ -1,0 +1,29 @@
+# Source code (server/bundle.cjs has everything)
+node_modules/
+src/
+dist/
+*.ts
+tsconfig.json
+build-bundle.mjs
+
+# Dev/test files
+test.js
+tests/
+integration_tests/
+smoketest/
+
+# Dev config
+.env
+.gitignore
+.npmignore
+.mcp.json
+.claude-plugin/
+.claude/
+package-lock.json
+
+# Docs (not needed in bundle)
+docs/
+CLAUDE.md
+
+# Previous bundles
+*.mcpb

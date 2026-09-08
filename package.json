@@ -1,0 +1,60 @@
+{
+  "name": "ops-patent-search",
+  "version": "0.3.0",
+  "description": "Unofficial MCP server for exploring patents via the EPO Open Patent Services (OPS) API. Not affiliated with the EPO. An exploratory tool for Claude Desktop and other MCP clients — not a substitute for specialised patent search platforms.",
+  "main": "dist/index.js",
+  "bin": {
+    "ops-patent-search": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "bundle": "node build-bundle.mjs",
+    "prepublishOnly": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "npx tsx tests/integration.ts",
+    "test:integration": "npx tsx tests/integration.ts",
+    "test:scenarios": "npx tsx integration_tests/run-all.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "patents",
+    "epo",
+    "patent-search",
+    "intellectual-property",
+    "open-patent-services",
+    "claude",
+    "ai-tools"
+  ],
+  "author": "Navis Bio",
+  "license": "MIT",
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/navisbio/OPS-patent-search-mcp.git"
+  },
+  "homepage": "https://github.com/navisbio/OPS-patent-search-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/navisbio/OPS-patent-search-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "esbuild": "^0.27.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
