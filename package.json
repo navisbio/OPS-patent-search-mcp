@@ -1,6 +1,6 @@
 {
   "name": "ops-patent-search",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "description": "Unofficial MCP server for exploring patents via the EPO Open Patent Services (OPS) API. Not affiliated with the EPO. An exploratory tool for Claude Desktop and other MCP clients — not a substitute for specialised patent search platforms.",
   "main": "dist/index.js",
   "bin": {
