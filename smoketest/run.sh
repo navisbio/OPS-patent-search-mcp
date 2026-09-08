@@ -95,9 +95,18 @@ else:
 # ── Define test cases ───────────────────────────────────────────────────────
 # Each test: name|max_turns|max_budget|prompt
 # Use 0 for max_turns or max_budget to leave them unlimited
+#
+# On max_turns: basic-search and keyword-search are the budget-constrained
+# cases — they check that the tools let an agent finish a simple job without
+# wandering. The original caps (3 and 4) were tuned against an earlier model
+# and are below what the task actually needs: a 2026-09-08 run of basic-search
+# hit the cap after 18 successful tool calls while still mid-task, discarding
+# the result. The limits are now 8, which leaves room to finish while still
+# failing an agent that flails. Cost is bounded by max_budget regardless, which
+# is the real guard — raise turns before assuming a genuine efficiency problem.
 TESTS=(
-  "basic-search|3|2.00|Search for patents about CRISPR Cas9 gene editing. Use count_only=true first, then retrieve the top 5 results with detail_level=full. Report the publication numbers, titles, and applicants."
-  "keyword-search|4|2.00|Get the bibliographic data for patent EP3401400, then search its full text for the keywords 'guide RNA' and 'Cas9'. Report the match count and show the first 3 context snippets."
+  "basic-search|8|2.00|Search for patents about CRISPR Cas9 gene editing. Use count_only=true first, then retrieve the top 5 results with detail_level=full. Report the publication numbers, titles, and applicants."
+  "keyword-search|8|2.00|Get the bibliographic data for patent EP3401400, then search its full text for the keywords 'guide RNA' and 'Cas9'. Report the match count and show the first 3 context snippets."
   "prior-art-skill|0|0|Run a prior art search for: a bispecific antibody targeting both PD-1 and TIGIT for treatment of non-small cell lung cancer. Follow the prior-art-search skill workflow and produce the full structured prior art report."
   "fto-check|0|0|Perform a freedom-to-operate check for: an antibody-drug conjugate with a cleavable linker and a topoisomerase-I inhibitor payload. Follow the fto-analysis skill workflow and produce the full FTO risk report."
   "citation-network|0|0|Build a citation network starting from patent EP3401400. Get its backward citations, then check forward citations using the ct= CQL operator. Identify the most-cited patents. Follow the citation-network skill workflow and produce the full citation network report."

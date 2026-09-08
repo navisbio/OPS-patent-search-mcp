@@ -15,6 +15,7 @@ For exhaustive patent landscape analysis, systematic FTO assessments, or large-s
 | `get_patent_claims` | Paginated claims text. Auto-falls back to EP/WO family equivalent if needed. |
 | `get_patent_description` | Paginated specification text. Same family fallback as claims. |
 | `search_in_patent_text` | Keyword search within claims + description. Returns snippets with paragraph indexes for targeted reading. |
+| `search_and_filter_fulltext` | Search, then keep only the hits whose claims or description actually contain your terms. One call instead of a search plus one full-text call per hit. |
 | `get_patent_family` | INPADOC patent family members across jurisdictions. |
 | `get_patent_legal_status` | Grant, opposition, lapse, withdrawal events. Determines whether a patent is in force. |
 | `get_patent_citations` | Backward citations (prior art) split into patent and non-patent literature. |

@@ -148,8 +148,13 @@ export function parseSearchResults(json: string): {
     const pubDate = docId?.date;
 
     const pubNum = docId?.formatted ?? "unknown";
-    const country = docId?.country ?? "";
-    const kind = docId?.kind ?? "";
+    // The epodoc document-id carries no kind code, so read country/kind from the
+    // docdb id when present. Without this every result looked like an unknown
+    // kind and the fulltext heuristic below returned false for everything —
+    // including EP/WO A-publications, which are the ones reliably indexed.
+    const docdbId = pickDocId(pubRef, "docdb");
+    const country = docdbId?.country || docId?.country || "";
+    const kind = docdbId?.kind || docId?.kind || "";
     results.push({
       publicationNumber: pubNum,
       kindCode: kind || undefined,

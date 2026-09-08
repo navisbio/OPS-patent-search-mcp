@@ -25,9 +25,9 @@ This is a 3-file MCP server published as `ops-patent-search` on npm.
 - `paginateParagraphs` — slices a paragraph array by offset+limit+maxCharacters, returns `nextOffset` for continuation
 - `searchKeywordsInParagraphs` — regex-based keyword search across paragraphs, returns snippets with `paragraphIndex` usable as `offset` in the reading tools
 
-**[src/index.ts](src/index.ts)** — MCP server wiring. Defines 8 tools using `@modelcontextprotocol/sdk` and `zod` for parameter schemas. Runs on stdio transport. Tool descriptions contain the LLM-facing instructions for when/how to use each tool.
+**[src/index.ts](src/index.ts)** — MCP server wiring. Defines 9 tools using `@modelcontextprotocol/sdk` and `zod` for parameter schemas. Runs on stdio transport. Tool descriptions contain the LLM-facing instructions for when/how to use each tool.
 
-Tools: `search_patents`, `get_patent_details`, `get_patent_claims`, `get_patent_description`, `search_in_patent_text`, `get_patent_family`, `get_patent_legal_status`, `get_patent_citations`.
+Tools: `search_patents`, `get_patent_details`, `get_patent_claims`, `get_patent_description`, `search_in_patent_text`, `search_and_filter_fulltext`, `get_patent_family`, `get_patent_legal_status`, `get_patent_citations`.
 
 ## Key design constraints
 
