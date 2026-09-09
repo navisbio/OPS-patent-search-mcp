@@ -134,7 +134,7 @@ EOF
 if [[ -z "$SCENARIOS" ]]; then echo "No scenarios match (suite=$SUITE, test=$SINGLE_TEST)"; exit 1; fi
 
 PASS=0; FAIL=0; TOTAL=0
-while IFS='|' read -r name suite max_turns max_budget prompt_b64; do
+while IFS='|' read -r -u 3 name suite max_turns max_budget prompt_b64; do
   [[ -z "$name" ]] && continue
   prompt=$(printf '%s' "$prompt_b64" | base64 -d)
   TOTAL=$((TOTAL + 1))
@@ -150,14 +150,32 @@ while IFS='|' read -r name suite max_turns max_budget prompt_b64; do
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
   # ── Message 1: the task ──────────────────────────────────────────────────
+  # The model's safety layer occasionally refuses an ordinary patent task
+  # (a CRISPR search was refused with category "bio" once). One retry with
+  # a fresh session; a second refusal is recorded as such, not as a failure
+  # of the tools.
   task_stream="$OUTPUT_DIR/${name}.task.stream.jsonl"
   echo "  [1/3] Running task..."
-  if CLAUDECODE= claude -p "$prompt" \
-      --plugin-dir "$PLUGIN_DIR" --allowedTools "$ALLOWED_TOOLS" --output-format stream-json \
-      --session-id "$SESSION_ID" "${MODEL_FLAGS[@]}" "${LIMIT_FLAGS[@]}" --verbose > "$task_stream" 2>&1; then
+  task_ok=0
+  for attempt in 1 2; do
+    if CLAUDECODE= claude -p "$prompt" \
+        --plugin-dir "$PLUGIN_DIR" --allowedTools "$ALLOWED_TOOLS" --output-format stream-json \
+        --session-id "$SESSION_ID" "${MODEL_FLAGS[@]}" "${LIMIT_FLAGS[@]}" --verbose < /dev/null > "$task_stream" 2>&1; then
+      if grep -q '"stop_reason":"refusal"' "$task_stream" && [[ "$attempt" == "1" ]]; then
+        echo "  refused by the model's safety layer; retrying once with a new session"
+        SESSION_ID=$(python3 -c "import uuid; print(uuid.uuid4())")
+        continue
+      fi
+      task_ok=1
+    fi
+    break
+  done
+  if [[ "$task_ok" == "1" ]]; then
     extract_text "$task_stream" "$OUTPUT_DIR/${name}.task.txt" "$OUTPUT_DIR/${name}.task.json"
     mcp_calls=$(grep -c 'mcp__plugin_ops-patent-search' "$task_stream" 2>/dev/null || echo "0")
-    if [[ "$mcp_calls" -gt 0 ]]; then
+    if grep -q '"stop_reason":"refusal"' "$task_stream"; then
+      echo "  REFUSED - model safety layer refused the task twice"; FAIL=$((FAIL + 1)); continue
+    elif [[ "$mcp_calls" -gt 0 ]]; then
       echo "  ran - $mcp_calls MCP tool calls"; PASS=$((PASS + 1))
     else
       echo "  FAIL - no MCP tool calls (server not connected?)"; FAIL=$((FAIL + 1)); continue
@@ -171,7 +189,7 @@ while IFS='|' read -r name suite max_turns max_budget prompt_b64; do
   echo "  [2/3] Grounding check..."
   if CLAUDECODE= claude -p "$HALLUCINATION_CHECK_PROMPT" --resume "$SESSION_ID" \
       --plugin-dir "$PLUGIN_DIR" --allowedTools "$ALLOWED_TOOLS" --output-format stream-json \
-      "${MODEL_FLAGS[@]}" --verbose > "$hallu_stream" 2>&1; then
+      "${MODEL_FLAGS[@]}" --verbose < /dev/null > "$hallu_stream" 2>&1; then
     extract_text "$hallu_stream" "$OUTPUT_DIR/${name}.hallucination.txt" "$OUTPUT_DIR/${name}.hallucination.json"
     echo "  collected ($(wc -c < "$OUTPUT_DIR/${name}.hallucination.txt" | tr -d ' ') bytes)"
   else
@@ -186,13 +204,13 @@ while IFS='|' read -r name suite max_turns max_budget prompt_b64; do
   feedback_stream="$OUTPUT_DIR/${name}.feedback.stream.jsonl"
   echo "  [3/3] Collecting critique..."
   if CLAUDECODE= claude -p "$FOLLOWUP_PROMPT" --resume "$SESSION_ID" --output-format stream-json \
-      "${MODEL_FLAGS[@]}" --max-turns 1 --verbose > "$feedback_stream" 2>&1; then
+      "${MODEL_FLAGS[@]}" --max-turns 1 --verbose < /dev/null > "$feedback_stream" 2>&1; then
     extract_text "$feedback_stream" "$OUTPUT_DIR/${name}.feedback.txt" "$OUTPUT_DIR/${name}.feedback.json"
     echo "  collected ($(wc -c < "$OUTPUT_DIR/${name}.feedback.txt" | tr -d ' ') bytes)"
   else
     echo "  WARN - critique failed"
   fi
-done <<< "$SCENARIOS"
+done 3<<< "$SCENARIOS"
 
 # ── Grade, judge, extract ────────────────────────────────────────────────────
 echo ""
