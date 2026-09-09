@@ -44,7 +44,7 @@ Seed patent(s)
 **Before any citation analysis**, run `get_patent_family` on the seed patent to determine if it is a WO (PCT), EP divisional, US continuation, or national phase entry. This is critical because:
 
 - Forward citations concentrate on the **parent WO/PCT publication**, not divisionals or national phase entries
-- EP3401400 (a divisional) may have only 40 forward citations while parent WO2013176772 has 1,771
+- EP3401400 (a divisional) has a handful of forward citations while its parent WO2013176772 has hundreds; the exact numbers grow over time, so always measure with count_only rather than quoting a figure
 - If the seed is a divisional/national phase, **redirect forward citation analysis to the parent WO** for meaningful results
 
 ```

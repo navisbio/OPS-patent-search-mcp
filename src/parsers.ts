@@ -251,7 +251,11 @@ export function parseBiblio(json: string): PatentBiblio[] {
     }).filter((p: PriorityClaim) => p.number);
 
     const pubNum = docId?.formatted ?? "unknown";
-    const kindCode = docId?.kind || undefined;
+    // The epodoc id carries no kind code; read it from the docdb id (same fix as
+    // parseSearchResults). Without it A1 and B1 records of one number are
+    // indistinguishable and agents guess the publication stage.
+    const docdbId = pickDocId(pubRef, "docdb");
+    const kindCode = docdbId?.kind || docId?.kind || undefined;
     // Build Espacenet URL from country + doc-number
     const espacenetUrl = docId
       ? `https://worldwide.espacenet.com/patent/search?q=pn%3D${encodeURIComponent(pubNum)}`
@@ -426,6 +430,10 @@ export interface KeywordSnippet {
 export interface KeywordSearchResult {
   totalMatchCount: number;
   matchCountByKeyword: Record<string, number>;
+  /** How many of the returned matches belong to each term (after the limit). */
+  returnedByKeyword: Record<string, number>;
+  /** True when totalMatchCount exceeds the number of matches returned. */
+  truncated: boolean;
   matches: KeywordSnippet[];
 }
 
@@ -452,10 +460,17 @@ export function searchKeywordsInParagraphs(
     ),
   }));
 
-  const matches: KeywordSnippet[] = [];
+  // Candidates are collected per term (capped at `limit` each) and then
+  // interleaved round-robin. A first-come selection let one frequent term
+  // ("bispecific" x106) fill the whole window and hide rare terms ("NSCLC" x6),
+  // which cost agents extra calls and hid the paragraphs they were after.
+  const perTerm = new Map<string, KeywordSnippet[]>();
   let totalMatchCount = 0;
   const matchCountByKeyword: Record<string, number> = {};
-  for (const { term } of patterns) matchCountByKeyword[term] = 0;
+  for (const { term } of patterns) {
+    matchCountByKeyword[term] = 0;
+    perTerm.set(term, []);
+  }
 
   for (const p of paragraphs) {
     if (sectionFilter && !sectionFilter.includes(p.section.toLowerCase())) {
@@ -464,12 +479,13 @@ export function searchKeywordsInParagraphs(
 
     for (const { term, regex } of patterns) {
       regex.lastIndex = 0;
+      const bucket = perTerm.get(term)!;
       let match: RegExpExecArray | null;
       while ((match = regex.exec(p.text)) !== null) {
         totalMatchCount++;
         matchCountByKeyword[term]++;
 
-        if (matches.length < limit) {
+        if (bucket.length < limit) {
           const start = match.index;
           const end = start + match[0].length;
           const snippetStart = Math.max(0, start - contextChars);
@@ -479,7 +495,7 @@ export function searchKeywordsInParagraphs(
           if (snippetStart > 0) snippet = "…" + snippet;
           if (snippetEnd < p.text.length) snippet = snippet + "…";
 
-          matches.push({
+          bucket.push({
             keyword: term,
             matchText: match[0],
             snippet,
@@ -492,7 +508,32 @@ export function searchKeywordsInParagraphs(
     }
   }
 
-  return { totalMatchCount, matchCountByKeyword, matches };
+  const selected: KeywordSnippet[] = [];
+  const cursors = patterns.map(() => 0);
+  let progressed = true;
+  while (selected.length < limit && progressed) {
+    progressed = false;
+    for (let i = 0; i < patterns.length && selected.length < limit; i++) {
+      const bucket = perTerm.get(patterns[i].term)!;
+      if (cursors[i] < bucket.length) {
+        selected.push(bucket[cursors[i]++]);
+        progressed = true;
+      }
+    }
+  }
+  selected.sort((a, b) => a.startChar - b.startChar);
+
+  const returnedByKeyword: Record<string, number> = {};
+  for (const { term } of patterns) returnedByKeyword[term] = 0;
+  for (const m of selected) returnedByKeyword[m.keyword]++;
+
+  return {
+    totalMatchCount,
+    matchCountByKeyword,
+    returnedByKeyword,
+    truncated: totalMatchCount > selected.length,
+    matches: selected,
+  };
 }
 
 /* ---------- family ---------- */
@@ -604,6 +645,8 @@ export interface PatentCitation {
   publicationNumber?: string;
   text?: string;
   category?: string;
+  /** "examiner" (search report) or "applicant". Only examiner citations carry a category. */
+  citedBy?: string;
 }
 
 export function parseCitations(json: string): PatentCitation[] {
@@ -618,7 +661,10 @@ export function parseCitations(json: string): PatentCitation[] {
     const biblio = exDoc?.["bibliographic-data"] ?? exDoc;
     const refs = asArray(biblio?.["references-cited"]?.citation);
     for (const ref of refs) {
-      const category = ref?.["@category"] ?? undefined;
+      // Category sits on the citation element for search-report citations;
+      // applicant-cited references have none.
+      const category = ref?.["@category"] ?? ref?.category ?? undefined;
+      const citedBy = ref?.["@cited-by"] ? extractText(ref["@cited-by"]) : undefined;
       if (ref?.patcit) {
         // Prefer docdb format (includes kind code) for unambiguous publication numbers
         const docId = pickDocId(ref.patcit, "docdb") ?? pickDocId(ref.patcit);
@@ -626,12 +672,14 @@ export function parseCitations(json: string): PatentCitation[] {
           type: "patent",
           publicationNumber: docId?.formatted,
           category: category ? extractText(category) : undefined,
+          citedBy,
         });
       } else if (ref?.nplcit) {
         citations.push({
           type: "npl",
           text: extractText(ref.nplcit?.text ?? ref.nplcit),
           category: category ? extractText(category) : undefined,
+          citedBy,
         });
       }
     }

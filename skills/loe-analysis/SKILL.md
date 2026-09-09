@@ -252,7 +252,7 @@ EU Market:
 ## Important Notes
 
 - **Patents are only part of the picture.** Regulatory exclusivities (data exclusivity, orphan drug exclusivity, pediatric exclusivity) are separate from patent protection and are NOT visible in patent databases. Always flag this limitation.
-- **Orange Book / patent linkage.** In the US, the FDA Orange Book lists patents associated with approved drugs. These patents may not all appear in a keyword search. If the user knows specific Orange Book patent numbers, search those directly.
+- **Orange Book / Purple Book patent linkage.** In the US, the FDA Orange Book lists patents for small-molecule drugs approved under an NDA; biologics approved under a BLA (antibodies such as pembrolizumab) are listed in the Purple Book instead, and their 12-year reference-product exclusivity is separate from any patent. Neither register is reachable through this server. If the user knows specific listed patent numbers, search those directly.
 - **SPC calculation is complex.** In Europe, SPC duration = (first marketing authorization date − patent filing date) − 5 years, capped at 5 years. The legal status events should show the granted SPC term.
 - **Biologics vs. small molecules.** Biosimilar entry has additional regulatory requirements (similarity studies) that delay entry beyond patent expiry. The LOE date is the earliest possible, not the expected market entry.
 - **Patent term adjustment (PTA).** US-specific, compensates for examination delays. Can add months to years. Visible in legal status events.

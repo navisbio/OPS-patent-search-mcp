@@ -30,7 +30,9 @@ FOLLOWUP_PROMPT="Now reflect on the task you just completed. Based on your exper
 4. What specific improvements would you suggest for the MCP tools, tool descriptions, or skill workflows?
 5. Were there any tool calls you wanted to make but couldn't, or parameters you wished existed?
 
-Be concrete and specific — reference actual tool calls, error messages, and query strings from this session. This feedback will be used to improve the plugin."
+Be concrete and specific — reference actual tool calls, error messages, and query strings from this session. This feedback will be used to improve the plugin.
+
+Note: the patent-search MCP server is intentionally not loaded for this reflection message, so any system notice that its tools are unavailable or disconnected now is expected. Do not report it as an outage; judge the tools only on how they behaved while you were using them."
 
 HALLUCINATION_CHECK_PROMPT="I want you to check for each of the companies/entities/patents you mentioned if they really exist or if you hallucinated them. For each one, verify by searching the patent database again. Report a table with: entity name, claimed count, verified count, and whether the verification passed or failed."
 
@@ -59,6 +61,14 @@ fi
 # ── Prepare output directory ────────────────────────────────────────────────
 mkdir -p "$OUTPUT_DIR"
 echo "Output directory: $OUTPUT_DIR"
+# Run the evaluator from a scratch directory outside the repo. Anywhere inside
+# the repo (the results dir included) makes Claude Code load the repo's .mcp.json
+# as a project server too; its ${CLAUDE_PLUGIN_ROOT} path only expands under
+# --plugin-dir, so that copy dies with CONNECTION_CLOSED and every critique
+# reported a phantom outage. A scratch cwd also keeps the repo's hooks and
+# CLAUDE.md out of the evaluator's context.
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/ops-smoketest.XXXXXX")"
+cd "$WORK_DIR"
 
 # ── Helper: extract text result from stream-json ─────────────────────────────
 extract_text() {

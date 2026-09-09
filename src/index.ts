@@ -21,6 +21,8 @@ import {
   parseLegalEvents,
   parseCitations,
   type LegalEvent,
+  type PatentBiblio,
+  type FamilyMember,
 } from "./parsers.js";
 
 /* ---------- env ---------- */
@@ -43,6 +45,16 @@ function errorResult(e: unknown) {
   const msg = e instanceof Error ? e.message : String(e);
   const throttle = client.lastThrottle;
   const parts = [`Error: ${msg}`];
+  if (/ambiguous/i.test(msg)) {
+    parts.push(
+      `\nHint: OPS found several publications for this number (e.g. A1 and B1). Give a kind code in docdb format, e.g. "EP.1234567.B1", or use epodoc format ("EP1234567") to take the first one.`
+    );
+  }
+  if (/3 characters required when '\*'/i.test(msg)) {
+    parts.push(
+      `\nHint: hyphens split a term into tokens, so freeze-dr* is read as dr*. Use the full word ("freeze-drying") or an unhyphenated stem with at least 3 characters before the *.`
+    );
+  }
   if (throttle?.isThrottled) {
     parts.push(
       `\nRate limit status: ${throttle.overallStatus}. ` +
@@ -132,6 +144,39 @@ function computeKindFallbacks(docNumber: string, inputFormat: string): string[] 
   return ["A1", "B1"].map((k) => `${cc}.${num}.${k}`);
 }
 
+/**
+ * The OPS family endpoint rejects some numbers in epodoc format that the
+ * biblio endpoint accepts (US application publications such as US2023233694,
+ * some WO numbers). Those resolve in docdb format with an explicit kind code.
+ * Retry with the common kind codes before giving up so that get_patent_family
+ * and the full-text family fallback do not dead-end on documents that
+ * get_patent_details just returned.
+ */
+async function getFamilyWithFormatFallback(
+  docNumber: string,
+  inputFormat: string,
+  light = false
+): Promise<{ raw: string; resolvedAs: string }> {
+  const fetch = (d: string, f: string) => (light ? client.getFamilyLight(d, f) : client.getFamily(d, f));
+  try {
+    return { raw: await fetch(docNumber, inputFormat), resolvedAs: docNumber };
+  } catch (e) {
+    if (!(e instanceof OpsApiError) || e.status !== 404 || inputFormat !== "epodoc") throw e;
+    const m = docNumber.match(/^([A-Z]{2})(\d+)$/);
+    if (!m) throw e;
+    const [, cc, num] = m;
+    for (const kind of ["A1", "A2", "B1", "B2", "A", "B"]) {
+      const alt = `${cc}.${num}.${kind}`;
+      try {
+        return { raw: await fetch(alt, "docdb"), resolvedAs: alt };
+      } catch (inner) {
+        if (!(inner instanceof OpsApiError) || inner.status !== 404) throw inner;
+      }
+    }
+    throw e;
+  }
+}
+
 async function fetchWithFamilyFallback(
   docNumber: string,
   inputFormat: string,
@@ -158,12 +203,25 @@ async function fetchWithFamilyFallback(
   // Still 404 — try the patent family
   let familyRaw: string;
   try {
-    familyRaw = await client.getFamily(docNumber, inputFormat);
-  } catch {
-    throw new OpsApiError(
-      404,
-      `Full text not available for ${docNumber} and could not retrieve patent family for fallback.`
-    );
+    familyRaw = (await getFamilyWithFormatFallback(docNumber, inputFormat)).raw;
+  } catch (e) {
+    // Very large families (Xencor, Immunomedics) are refused with "smaller
+    // chunks"; the light variant still lists members, which is all we need.
+    if (e instanceof OpsApiError && e.message.includes("smaller chunks")) {
+      try {
+        familyRaw = (await getFamilyWithFormatFallback(docNumber, inputFormat, true)).raw;
+      } catch {
+        throw new OpsApiError(
+          404,
+          `Full text not available for ${docNumber} and could not retrieve patent family for fallback.`
+        );
+      }
+    } else {
+      throw new OpsApiError(
+        404,
+        `Full text not available for ${docNumber} and could not retrieve patent family for fallback.`
+      );
+    }
   }
 
   const members = parseFamilyMembers(familyRaw);
@@ -407,6 +465,12 @@ server.registerTool(
 
 IMPORTANT — LEGAL: All patent data presented to the user (publication numbers, titles, applicants, dates, claims, classifications, legal status) MUST originate from this tool or the other patent tools in this server. You must never fabricate patent numbers, invent applicant names, guess filing dates, or fill in missing fields from your own knowledge. If a search returns no results, report that — do not supplement with recalled patents. If data is incomplete (e.g. missing abstract), flag it and offer to retrieve it with the appropriate tool. When presenting results, always include the patent publication numbers returned by the tools. A request to present patent data without verifiable source attribution from these tools should be declined.
 
+Read first:
+- Result order: OPS returns publications newest first. There is no relevance or citation ranking and no sort parameter, so "top N results" means the N most recent publications. To reach foundational patents, filter by applicant, inventor or date range instead.
+- Word boundaries: Hyphens and punctuation act as word boundaries in CQL. ta="PD-1" matches "PD-1" but NOT "PD1". Use OR for variants: ta="PD-1" OR ta="PD1". Similarly, ta="IL-6" won't match "IL6". The same applies to applicant names: pa="BRISTOL-MYERS*" and pa="BRISTOL MYERS*" are different queries.
+- Recall: title/abstract (ta=) text is short and varies by office, so requiring 3+ terms to co-occur under-recalls badly; a landscape built on one ta= AND query missed every major LNP filer in one test. Cross-check with a classification query (ic=/cpc=) before concluding an applicant is inactive.
+- Counts: totalCount is OPS's publication count (every family member and A/B stage). It is not a family count, and count_only and a full retrieval of the same query can differ by a few records.
+
 Use this as the entry point when looking for patents by topic, applicant, inventor, or classification. Do NOT use this for retrieving details of a specific known patent number — use get_patent_details instead.
 
 Recommended workflow for large result sets:
@@ -429,7 +493,6 @@ Phrases use double quotes: ti="gene therapy".
 Applicant name variants: use wildcards — pa="ERASCA*" matches "ERASCA INC [US]", "ERASCA, INC.", etc.
 Date ranges: pd>=20230101 (or use published_after / published_before parameters).
 IMPORTANT: Full-text fields (claims, desc, ftxt, extftxt) are unreliable for phrase searches and do NOT support wildcards. Use ta= for CQL filtering, then search_in_patent_text for keyword analysis within specific patents.
-Word boundaries: Hyphens and punctuation act as word boundaries in CQL. ta="PD-1" matches "PD-1" but NOT "PD1". Use OR for variants: ta="PD-1" OR ta="PD1". Similarly, ta="IL-6" won't match "IL6".
 
 Example queries:
   ta="checkpoint inhibitor" AND pa="Merck" AND pd>=2023
@@ -509,7 +572,11 @@ Example queries:
         if (totalCount > 2000) {
           note = `Query exceeds OPS 2000-result limit. Use auto_paginate=true for exhaustive retrieval (decomposes by year automatically), or split manually with published_after/published_before.`;
         }
-        return jsonResult(note ? { totalCount, note } : { totalCount });
+        return jsonResult({
+          totalCount,
+          totalCountNote: "totalCount counts every publication (WO+EP+US+JP variants of one invention, and A/B stages). Retrieval deduplicates, so fetched results are fewer.",
+          ...(note && { note }),
+        });
       }
 
       // ── single-page mode ────────────────────────────────────────────────────
@@ -580,6 +647,13 @@ Example queries:
       }
 
       // ── auto_paginate mode ──────────────────────────────────────────────────
+      // Full records run to ~2K characters each; 107 of them produced a 227K
+      // response that the client refused. Cap and say so rather than fail.
+      let fullDetailCapNote: string | undefined;
+      if (detail_level === "full" && max_results > 50) {
+        fullDetailCapNote = `detail_level="full" is capped at 50 results per auto_paginate call (max_results=${max_results} requested) so the response stays readable. Use detail_level="compact" for the full set, or page with range_start/range_end.`;
+        max_results = 50;
+      }
       // Peek at total count first to decide whether year decomposition is needed
       const peekRaw = await client.search(cql, 1, 1);
       const { totalCount: grandTotal } = parseSearchResults(peekRaw);
@@ -690,6 +764,7 @@ Example queries:
       const response: Record<string, unknown> = {
         totalCount: grandTotal,
         fetchedCount: allResults.length,
+        ...(fullDetailCapNote && { fullDetailCapNote }),
         ...(paginationErrors.length > 0 && {
           partial: true,
           paginationErrors,
@@ -743,7 +818,11 @@ Document number formats:
   epodoc (default): "EP1000000", "US2020001234", "WO2023123456"
   docdb: "EP.1000000.A1" (country.number.kind — more precise)
 
-Batch mode: pass document_numbers (array of up to 100 numbers) to retrieve multiple patents in one call. Chunks into groups of 20 internally. When using batch mode, document_number is ignored.`,
+Response: one record per publication stage of the number, each with kindCode (A1/A2 = application, B1/B2 = grant). A number with an A1 and a B1 publication therefore returns two records with different publicationDate values.
+
+Numbers with a kind suffix, as returned by get_patent_citations and get_patent_family ("US7169874B2"), are accepted and resolved precisely. A number that fails in epodoc format is retried with the common kind codes before it is reported missing.
+
+Batch mode: pass document_numbers (array of up to 100 numbers) to retrieve multiple patents in one call. When using batch mode, document_number is ignored. The batch response is an object: { requested, found, results, notFound }. notFound lists the requested numbers that returned no bibliographic record after all retries, so a missing patent is never silent. Keep batches to about 10 numbers when you need abstracts: 13 full records already exceed the client's 25K-token result limit and get redirected to a file. SPC and certificate numbers (kind I1/I2/C1) have no bibliographic record; look up the basic patent instead.`,
     inputSchema: {
       document_number: z
         .string()
@@ -763,34 +842,93 @@ Batch mode: pass document_numbers (array of up to 100 numbers) to retrieve multi
   },
   async ({ document_number, document_numbers, input_format }) => {
     client.startToolCall();
+    // OPS answers an unknown number with an exchange-document that has no
+    // bibliographic content. Returning that as a record made "not found" look
+    // like "a patent with no title", which agents then cited.
+    const isStub = (b: PatentBiblio) => !b.title && !b.abstract && b.applicants.length === 0 && !b.applicationNumber;
+    const dedupe = (records: PatentBiblio[]) => {
+      const seen = new Set<string>();
+      return records.filter((r) => {
+        const key = `${r.publicationNumber}|${r.kindCode ?? ""}|${r.publicationDate ?? ""}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    };
+    // Compare requested and returned numbers without dots, spaces or a kind suffix.
+    const baseNumber = (s: string) => s.replace(/[^A-Za-z0-9]/g, "").toUpperCase().replace(/(?<=\d)[A-Z]\d?$/, "");
+    // Citation lists and family members carry kind suffixes ("US7169874B2"),
+    // which the epodoc endpoint rejects. Route those through docdb instead.
+    const normalise = (n: string): { number: string; format: string } => {
+      const m = input_format === "epodoc" ? n.trim().match(/^([A-Z]{2})(\d+)([A-Z]\d?)$/) : null;
+      return m ? { number: `${m[1]}.${m[2]}.${m[3]}`, format: "docdb" } : { number: n.trim(), format: input_format };
+    };
+    const fetchOne = async (n: string, fmt: string): Promise<PatentBiblio[]> => {
+      try { return parseBiblio(await client.getBiblio(n, fmt)).filter((b) => !isStub(b)); } catch { return []; }
+    };
+    // Last resort for a number nothing else resolved: docdb with the common kind codes.
+    const fetchByKinds = async (n: string): Promise<PatentBiblio[]> => {
+      const m = n.match(/^([A-Z]{2})(\d+)$/);
+      if (!m) return [];
+      for (const kind of ["B2", "B1", "A1", "A2", "A", "B"]) {
+        const got = await fetchOne(`${m[1]}.${m[2]}.${kind}`, "docdb");
+        if (got.length > 0) return got;
+      }
+      return [];
+    };
     try {
       // Batch mode
       if (document_numbers && document_numbers.length > 0) {
-        const allBiblio: ReturnType<typeof parseBiblio> = [];
-        // Chunk into groups of 20 (OPS limit per request)
-        for (let i = 0; i < document_numbers.length; i += 20) {
-          const chunk = document_numbers.slice(i, i + 20);
-          try {
-            const raw = await client.getBiblioMulti(chunk, input_format);
-            allBiblio.push(...parseBiblio(raw));
-          } catch (e) {
-            // If batch fails, fall back to individual requests for this chunk
-            for (const doc of chunk) {
-              try {
-                const raw = await client.getBiblio(doc, input_format);
-                allBiblio.push(...parseBiblio(raw));
-              } catch {
-                // skip unavailable documents
-              }
+        const allBiblio: PatentBiblio[] = [];
+        const entries = document_numbers.map((d) => ({ requested: d, ...normalise(d) }));
+        // The multi-number endpoint is unreliable: one unknown number fails the
+        // whole request, and pairs of US grants are refused outright. Try it per
+        // format in chunks of 20, then recover every missing number individually.
+        for (const fmt of [...new Set(entries.map((e) => e.format))]) {
+          const nums = entries.filter((e) => e.format === fmt).map((e) => e.number);
+          for (let i = 0; i < nums.length; i += 20) {
+            const chunk = nums.slice(i, i + 20);
+            try {
+              allBiblio.push(...parseBiblio(await client.getBiblioMulti(chunk, fmt)).filter((b) => !isStub(b)));
+            } catch {
+              // recovered per number below
             }
           }
         }
-        return jsonResult(allBiblio, { grounding: true });
+        const have = () => new Set(allBiblio.map((b) => baseNumber(b.publicationNumber)));
+        let missing = entries.filter((e) => !have().has(baseNumber(e.requested)));
+        for (const e of missing.slice(0, 40)) allBiblio.push(...(await fetchOne(e.number, e.format)));
+        missing = entries.filter((e) => !have().has(baseNumber(e.requested)));
+        for (const e of missing.slice(0, 15)) {
+          if (e.format === "epodoc") allBiblio.push(...(await fetchByKinds(e.number)));
+        }
+        const results = dedupe(allBiblio);
+        const foundKeys = have();
+        const notFound = document_numbers.filter((d) => !foundKeys.has(baseNumber(d)));
+        return jsonResult({
+          requested: document_numbers.length,
+          found: document_numbers.length - notFound.length,
+          results,
+          notFound,
+          ...(notFound.length > 0 && {
+            note: `${notFound.length} of ${document_numbers.length} numbers returned no bibliographic record in ${input_format} format: ${notFound.join(", ")}. Do not cite them as existing. SPC/certificate numbers (kind I1/I2/C1) and some US grants resolve only with input_format="docdb" and a kind code, e.g. "US.8354509.B2".`,
+          }),
+        }, { grounding: true });
       }
 
       // Single mode
-      const raw = await client.getBiblio(document_number, input_format);
-      return jsonResult(parseBiblio(raw), { grounding: true });
+      const one = normalise(document_number);
+      const raw = await client.getBiblio(one.number, one.format);
+      let records = dedupe(parseBiblio(raw).filter((b) => !isStub(b)));
+      if (records.length === 0 && one.format === "epodoc") records = dedupe(await fetchByKinds(one.number));
+      if (records.length === 0) {
+        return jsonResult({
+          found: false,
+          documentNumber: document_number,
+          note: `OPS returned no bibliographic data for ${document_number} in ${input_format} format. Do not cite it as existing. Retry with input_format="docdb" and a kind code (e.g. "${document_number.replace(/^([A-Z]{2})(\d+).*$/, "$1.$2.B2")}"), or verify with search_patents(query='pn="${document_number}"', count_only=true).`,
+        }, { grounding: true });
+      }
+      return jsonResult(records, { grounding: true });
     } catch (e) {
       // On 404 in epodoc mode, retry with docdb format using common kind codes
       if (e instanceof OpsApiError && e.status === 404 && input_format === "epodoc") {
@@ -1016,7 +1154,7 @@ Full text is available primarily for EP, WO, and US patents.`,
         .min(1)
         .max(100)
         .default(30)
-        .describe("Max matches to return (default 30)"),
+        .describe("Max matches to return (default 30). The window is shared fairly across search_terms (round-robin), so a frequent term cannot hide a rare one; matchCountByKeyword still reports every occurrence."),
       case_sensitive: z
         .boolean()
         .default(false)
@@ -1137,6 +1275,8 @@ Full text is available primarily for EP, WO, and US patents.`,
         totalCharacters: totalChars,
         totalMatchCount: searchResult.totalMatchCount,
         matchCountByKeyword: searchResult.matchCountByKeyword,
+        returnedByKeyword: searchResult.returnedByKeyword,
+        truncated: searchResult.truncated,
         matchCount: enrichedMatches.length,
         matches: enrichedMatches,
         hint:
@@ -1442,7 +1582,9 @@ server.registerTool(
 
 IMPORTANT — LEGAL: Only list family members returned by this tool. Never guess at family members or jurisdictions.
 
-Use this to find equivalent patents filed in other countries, or to see the full publication history (A1, A2, B1 kind codes) of an invention.`,
+Use this to find equivalent patents filed in other countries, or to see the full publication history (A1, A2, B1 kind codes) of an invention.
+
+Response: { familySize, countByCountry, returned, members[] }. countByCountry always covers the whole family. Prolific filers have families of 300-700 members, so members are capped by max_members (default 150); use the countries filter (e.g. ["EP","US","WO"]) to see the members you need without raising the cap.`,
     inputSchema: {
       document_number: z
         .string()
@@ -1451,24 +1593,52 @@ Use this to find equivalent patents filed in other countries, or to see the full
         .enum(["epodoc", "docdb", "original"])
         .default("epodoc")
         .describe("Number format"),
+      countries: z
+        .array(z.string())
+        .optional()
+        .describe('Return only members from these offices, e.g. ["EP", "US", "WO"]. countByCountry is still computed over the whole family.'),
+      max_members: z
+        .number()
+        .int()
+        .min(1)
+        .max(2000)
+        .default(150)
+        .describe("Cap on members returned after the countries filter (default 150)."),
     },
     annotations: { readOnlyHint: true },
   },
-  async ({ document_number, input_format }) => {
+  async ({ document_number, input_format, countries, max_members }) => {
     client.startToolCall();
+    const shape = (members: FamilyMember[], resolvedAs: string, extraNote?: string) => {
+      const counts = new Map<string, number>();
+      for (const m of members) counts.set(m.country || "??", (counts.get(m.country || "??") ?? 0) + 1);
+      const countByCountry = Object.fromEntries([...counts.entries()].sort((a, b) => b[1] - a[1]));
+      const wanted = countries && countries.length > 0 ? new Set(countries.map((c) => c.toUpperCase())) : null;
+      const filtered = wanted ? members.filter((m) => wanted.has((m.country || "").toUpperCase())) : members;
+      const shown = filtered.slice(0, max_members);
+      const notes: string[] = [];
+      if (resolvedAs !== document_number) notes.push(`Resolved ${document_number} as ${resolvedAs} (docdb format); the family endpoint did not accept the epodoc form.`);
+      if (wanted) notes.push(`Filtered to ${filtered.length} member(s) in ${[...wanted].join(", ")}.`);
+      if (shown.length < filtered.length) notes.push(`Showing ${shown.length} of ${filtered.length} members. Raise max_members or narrow with countries to see the rest.`);
+      if (extraNote) notes.push(extraNote);
+      return jsonResult({
+        documentNumber: document_number,
+        familySize: members.length,
+        countByCountry,
+        returned: shown.length,
+        members: shown,
+        ...(notes.length > 0 && { note: notes.join(" ") }),
+      }, { grounding: true });
+    };
     try {
-      const raw = await client.getFamily(document_number, input_format);
-      return jsonResult(parseFamilyMembers(raw), { grounding: true });
+      const { raw, resolvedAs } = await getFamilyWithFormatFallback(document_number, input_format);
+      return shape(parseFamilyMembers(raw), resolvedAs);
     } catch (e) {
       // Handle "smaller chunks" error for very large patent families — retry without biblio
       if (e instanceof OpsApiError && e.message.includes("smaller chunks")) {
         try {
-          const lightRaw = await client.getFamilyLight(document_number, input_format);
-          const members = parseFamilyMembers(lightRaw);
-          return jsonResult({
-            members,
-            note: `Large patent family (${members.length} members). Retrieved without full biblio data — titles may be missing. Use get_patent_details on individual members for full details.`,
-          }, { grounding: true });
+          const { raw, resolvedAs } = await getFamilyWithFormatFallback(document_number, input_format, true);
+          return shape(parseFamilyMembers(raw), resolvedAs, "Large family retrieved without biblio data; titles may be missing. Use get_patent_details on individual members.");
         } catch {
           return jsonResult({
             error: "family_too_large",
@@ -1484,11 +1654,52 @@ Use this to find equivalent patents filed in other countries, or to see the full
 
 /* --- legal status summary helper --- */
 
+/** Grant events across offices. EP publishes the grant as GRAA "(EXPECTED) GRANT"
+ *  plus a STAA status line "THE PATENT HAS BEEN GRANTED"; neither carries the
+ *  word "granted" in its description, which is why granted patents were
+ *  reported as pending until 2026-09. */
+function isGrantEvent(e: LegalEvent): boolean {
+  const code = (e.eventCode ?? "").trim().toUpperCase();
+  const desc = (e.description ?? "").toLowerCase();
+  const free = (e.freeText ?? "").toUpperCase();
+  return (
+    code === "B1" || code === "B2" ||   // EP grant publication
+    code === "STCF" ||                  // US: patent grant
+    code === "GRAA" ||                  // EP: mention of grant in the Bulletin
+    (code === "STAA" && free.includes("HAS BEEN GRANTED")) ||
+    desc.includes("patent granted") ||
+    desc.includes("grant of patent") ||
+    desc.includes("decision to grant") ||
+    desc.includes("rule 71(3)") ||
+    desc.includes("b1 publication") ||
+    desc.includes("b2 publication")
+  );
+}
+
+/** SPC / PTE events. EP national SPC registrations arrive as REG events whose
+ *  free text starts with "PRODUCT NAME:"; the description ("REFERENCE TO A
+ *  NATIONAL CODE") says nothing about SPCs. */
+function isSpcEvent(e: LegalEvent): boolean {
+  const code = (e.eventCode ?? "").trim().toUpperCase();
+  const desc = (e.description ?? "").toLowerCase();
+  const free = (e.freeText ?? "").toUpperCase();
+  if (code === "CC" || desc === "certificate of correction") return false;
+  return (
+    desc.includes("supplementary protection") ||
+    desc.includes("patent term extension") ||
+    code === "PTEF" ||     // US: PTE filed
+    code === "PTEG" ||     // US: PTE granted
+    (code === "REG" && /PRODUCT NAME|\bSPC\b|SUPPLEMENTARY PROTECTION|CERTIFICATE/.test(free))
+  );
+}
+
 function summarizeLegalStatus(events: LegalEvent[]): {
   granted: boolean;
   lapsed: boolean;
   oppositionFiled: boolean;
   spcOrPte: boolean;
+  /** EP contracting states with an SPC registration (from national REG events) */
+  spcStates: string[];
   keyEvents: string[];
   /** EP contracting states where the patent has lapsed (from PG25 events) */
   lapsedStates: string[];
@@ -1504,6 +1715,7 @@ function summarizeLegalStatus(events: LegalEvent[]): {
   const keyEvents: string[] = [];
   const lapsedStates = new Set<string>();
   const activeStates = new Set<string>();
+  const spcStates = new Set<string>();
   const spcOrPteDetails: string[] = [];
 
   for (const e of events) {
@@ -1512,17 +1724,7 @@ function summarizeLegalStatus(events: LegalEvent[]): {
     const dateStr = e.date ? ` (${e.date})` : "";
     const ctry = e.country ? `[${e.country}] ` : "";
 
-    // Grant detection — specific EP B1/B2 publication codes, US STCF
-    if (
-      code === "B1" || code === "B2" ||  // EP grant publication
-      code === "STCF" ||       // US: patent grant
-      desc.includes("patent granted") ||
-      desc.includes("grant of patent") ||
-      desc.includes("decision to grant") ||
-      desc.includes("rule 71(3)") ||
-      desc.includes("b1 publication") ||
-      desc.includes("b2 publication")
-    ) {
+    if (isGrantEvent(e)) {
       granted = true;
       keyEvents.push(`${ctry}Granted${dateStr}`);
     }
@@ -1560,22 +1762,23 @@ function summarizeLegalStatus(events: LegalEvent[]): {
         keyEvents.push(`${ctry}Opposition${dateStr}`);
       }
     }
-    // SPC / PTE — exclude "certificate of correction" (CC) events
-    if (code === "CC" || desc === "certificate of correction") {
-      // Skip — CC is not SPC/PTE
-    } else if (
-      desc.includes("supplementary protection") ||
-      desc.includes("patent term extension") ||
-      code === "PTEF" ||     // US: PTE filed
-      code === "PTEG"        // US: PTE granted
-    ) {
+    if (isSpcEvent(e)) {
       spcOrPte = true;
-      keyEvents.push(`${ctry}SPC/PTE${dateStr}`);
-      // Capture free text for duration/details
+      if (e.refCountryCode) spcStates.add(e.refCountryCode);
+      // One keyEvent per SPC would swamp the summary (Keytruda's EP has 100+
+      // national REG events); a single line is added after the loop.
       if (e.freeText) {
-        spcOrPteDetails.push(e.freeText);
+        spcOrPteDetails.push(`${e.refCountryCode ? `[${e.refCountryCode}] ` : ""}${e.freeText}`);
       }
     }
+  }
+
+  if (spcOrPte) {
+    keyEvents.push(
+      spcStates.size > 0
+        ? `SPC/PTE registered in ${[...spcStates].sort().join(", ")}`
+        : "SPC/PTE recorded"
+    );
   }
 
   // If we have PG25 lapse data, also set the overall lapsed flag if ALL states have lapsed
@@ -1592,10 +1795,11 @@ function summarizeLegalStatus(events: LegalEvent[]): {
 
   return {
     granted, lapsed, oppositionFiled, spcOrPte,
+    spcStates: [...spcStates].sort(),
     keyEvents: [...new Set(keyEvents)],
     lapsedStates: [...lapsedStates].sort(),
     activeStates: [...activeStates].sort(),
-    spcOrPteDetails: [...new Set(spcOrPteDetails)],
+    spcOrPteDetails: [...new Set(spcOrPteDetails)].slice(0, 60),
   };
 }
 
@@ -1612,6 +1816,10 @@ Use this to determine whether a patent is currently in force (granted and not la
 
 Returns a statusSummary object with:
 - Flags: granted, lapsed, oppositionFiled, spcOrPte
+- spcStates: EP contracting states with an SPC registration
+- SPC certificate numbers themselves (kind I1/I2/C1, e.g. LU92936I) have no legal-status record: OPS files SPC events under the basic patent (EP2170959), so query that number
+- SPC expiry is not provided by OPS; spcOrPteDetails carries the marketing-authorisation number and date from the national register entry, from which the term can be estimated
+- statusSummary is always computed from the full event list; event_types only filters the legalEvents echoed back
 - keyEvents: human-readable summary of important events
 - lapsedStates: EP contracting state codes where patent has lapsed (from PG25 events, e.g. ["AT","CH","CY","DE"])
 - activeStates: EP contracting state codes where annual fees are paid (from PGFP events, e.g. ["FR","GB","NL"])
@@ -1640,7 +1848,28 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
   async ({ document_number, input_format, event_types, condensed }) => {
     client.startToolCall();
     try {
-      const raw = await client.getLegalStatus(document_number, input_format);
+      // Same epodoc gap as the family endpoint: some US publications resolve
+      // only in docdb format with a kind code.
+      let raw: string;
+      let resolvedAs = document_number;
+      try {
+        raw = await client.getLegalStatus(document_number, input_format);
+      } catch (e) {
+        const m = input_format === "epodoc" ? document_number.match(/^([A-Z]{2})(\d+)$/) : null;
+        if (!(e instanceof OpsApiError) || e.status !== 404 || !m) throw e;
+        let recovered: string | null = null;
+        for (const kind of ["A1", "B2", "B1", "A2", "A", "B"]) {
+          try {
+            recovered = await client.getLegalStatus(`${m[1]}.${m[2]}.${kind}`, "docdb");
+            resolvedAs = `${m[1]}.${m[2]}.${kind}`;
+            break;
+          } catch {
+            // next kind
+          }
+        }
+        if (!recovered) throw e;
+        raw = recovered;
+      }
       const events = parseLegalEvents(raw);
 
       // Derive a high-level status summary from event codes/descriptions
@@ -1653,10 +1882,10 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
         filteredEvents = events.filter((e) => {
           const code = (e.eventCode ?? "").toUpperCase();
           const desc = (e.description ?? "").toLowerCase();
-          if (typeSet.has("grant") && (code === "B1" || code === "B2" || code === "STCF" || desc.includes("patent granted") || desc.includes("b1 publication") || desc.includes("b2 publication"))) return true;
+          if (typeSet.has("grant") && isGrantEvent(e)) return true;
           if (typeSet.has("lapse") && (code === "PG25" || desc.includes("lapse") || desc.includes("ceased") || desc.includes("expired") || desc.includes("not in force"))) return true;
           if (typeSet.has("opposition") && (code.startsWith("OPP") || (desc.includes("opposition") && !desc.includes("no opposition")))) return true;
-          if (typeSet.has("spc_pte") && (desc.includes("supplementary protection") || desc.includes("patent term extension") || code === "PTEF" || code === "PTEG")) return true;
+          if (typeSet.has("spc_pte") && isSpcEvent(e)) return true;
           if (typeSet.has("withdrawal") && (desc.includes("withdrawn") || desc.includes("withdrawal"))) return true;
           if (typeSet.has("abandonment") && (code === "STCB" || desc.includes("abandoned"))) return true;
           if (typeSet.has("fee_payment") && code === "PGFP") return true;
@@ -1693,6 +1922,7 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
 
       return jsonResult({
         documentNumber: document_number,
+        ...(resolvedAs !== document_number && { resolvedAs, note: `Resolved ${document_number} as ${resolvedAs} (docdb format).` }),
         statusSummary,
         totalEvents: events.length,
         filteredEvents: filteredEvents.length,
@@ -1713,7 +1943,7 @@ server.registerTool(
 
 IMPORTANT — LEGAL: Only list citations returned by this tool. Never fabricate citation relationships.
 
-Returns patent citations (with publication numbers) and non-patent literature citations (NPL, e.g. journal articles). Each citation may include a category letter assigned by the patent examiner:
+Returns patent citations (with publication numbers) and non-patent literature citations (NPL, e.g. journal articles). Each citation carries citedBy ("examiner" or "applicant"). Only examiner citations from the search report carry a category letter; applicant-cited references (the majority for EP applications) have none:
   X = particularly relevant (alone anticipates the invention)
   Y = relevant in combination with other documents
   A = general technological background
@@ -1735,25 +1965,40 @@ To find forward citations — patents that cite a given document — use search_
         .number()
         .int()
         .positive()
+        .max(2000)
         .default(200)
-        .describe("Maximum number of citations to return. US patents can have thousands; default 200 is sufficient for most prior art analysis."),
+        .describe("Maximum number of citations to return per type (patent, NPL) in this call. Around 400 patent citations fit in one response; beyond that the client redirects the result to a file. Page with citations_offset instead of raising this."),
+      citations_offset: z
+        .number()
+        .int()
+        .min(0)
+        .default(0)
+        .describe("Skip this many citations of each type before returning max_citations of them. Use with truncated=true to page through long citation lists."),
     },
     annotations: { readOnlyHint: true },
   },
-  async ({ document_number, input_format, max_citations }) => {
+  async ({ document_number, input_format, max_citations, citations_offset }) => {
     client.startToolCall();
     try {
       const raw = await client.getBiblio(document_number, input_format);
       const citations = parseCitations(raw);
-      const patentCitations = citations.filter((c) => c.type === "patent").slice(0, max_citations);
-      const nplCitations = citations.filter((c) => c.type === "npl").slice(0, max_citations);
-      const truncated = citations.length > max_citations * 2;
+      const allPatent = citations.filter((c) => c.type === "patent");
+      const allNpl = citations.filter((c) => c.type === "npl");
+      const patentCitations = allPatent.slice(citations_offset, citations_offset + max_citations);
+      const nplCitations = allNpl.slice(citations_offset, citations_offset + max_citations);
+      const truncated = allPatent.length > citations_offset + max_citations || allNpl.length > citations_offset + max_citations;
       return jsonResult({
         documentNumber: document_number,
         totalCitations: citations.length,
+        patentCitationCount: allPatent.length,
+        nplCitationCount: allNpl.length,
+        returnedPatentCitations: patentCitations.length,
+        returnedNplCitations: nplCitations.length,
+        truncated,
         patentCitations,
         nplCitations,
-        ...(truncated && { note: `Showing first ${max_citations} of each citation type. Increase max_citations to retrieve more.` }),
+        ...(citations_offset > 0 && { citationsOffset: citations_offset }),
+        ...(truncated && { note: `Truncated: showing ${patentCitations.length} of ${allPatent.length} patent and ${nplCitations.length} of ${allNpl.length} NPL citations. Call again with citations_offset=${citations_offset + max_citations} for the next page.` }),
         hint: `To find patents that CITE ${document_number} (forward citations), use search_patents with query: ct="${document_number}"`,
       }, { grounding: true });
     } catch (e) {
