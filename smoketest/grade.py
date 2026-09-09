@@ -183,7 +183,10 @@ def main():
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
     d = args.results_dir.rstrip("/")
-    catalog = json.load(open(args.catalog))["scenarios"]
+    # Prefer the catalog snapshot the run was made with, so a scenario edited
+    # after the run is still graded against the prompt it actually used.
+    snapshot = f"{d}/scenarios.json"
+    catalog = json.load(open(snapshot if os.path.exists(snapshot) else args.catalog))["scenarios"]
     grades = []
     for sc in catalog:
         g = grade_scenario(d, sc)
