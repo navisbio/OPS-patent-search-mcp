@@ -68,6 +68,8 @@ Construct 2-4 CQL queries of decreasing specificity:
 
 ## Step 3: Size the Landscape
 
+Add one query on a different axis from the keyword queries: a classification query (`ic=`/`cpc=` for the field) or an applicant query for the known players. A landscape built from a single `ta=` axis has no way to show what it missed.
+
 For each query, start with `count_only=true`:
 
 ```
@@ -93,6 +95,8 @@ From the results, identify **5-15 top candidates** based on title/abstract relev
 
 ## Step 5: Keyword Search in Full Text
 
+Zero matches is a finding only when the text could have matched. Check `textLanguage` in the response; if the full text is not English, search an EP, WO or US family member instead. If a document with claims paragraphs returns zero matches for the word "claim", the search did not run over the text you think it did: read the first claims page with `get_patent_claims` before concluding a concept is absent.
+
 For each top candidate, use `search_in_patent_text` before reading full text:
 
 ```
@@ -112,6 +116,8 @@ This returns:
 **Check all document types:** Don't search only WO publications. Include EP granted patents (B1/B2 kind codes) and US patents — EP granted claims are narrower but legally definitive, and US patents/applications often contain the most detailed experimental data.
 
 ## Step 6: Deep-Read Relevant Sections
+
+When `resolvedDocuments` shows claims came from a family member (a WO for a US number), say so where the claims are quoted, and label PCT claims "as filed, unexamined". Granted claims that fail to fetch must be reported as not read, not paraphrased from the application.
 
 For patents with keyword matches, read the specific sections:
 
@@ -177,6 +183,9 @@ Present findings as a structured prior art report:
    - Jurisdictions to check for additional prior art
 
 ## Important Notes
+
+- Never add applicant name-variant counts together; run one OR query over the variants and report that count.
+- Assert a legal status (pending, granted, lapsed) for a jurisdiction only after a `get_patent_legal_status` call on that member.
 
 - **NEVER inject training knowledge as fact.** Report ONLY information returned by the patent tools. Do not supplement with drug names (e.g. INN codes like "AZD2936"), clinical trial results, preclinical data, or mechanism details from your training data. If a piece of information isn't in the tool output, say "not available from patent data" rather than filling it in from memory.
 - **NEVER describe companies from training knowledge.** Do not add phrases like "a leading pharmaceutical company" or "known for its oncology portfolio" — these are hallucination-prone. Only state what the patent data shows (e.g., "applicant on 12 results in this search").

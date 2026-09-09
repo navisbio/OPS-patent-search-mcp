@@ -107,6 +107,9 @@ export class EpoClient {
   private token: TokenInfo | null = null;
   /** Most recent throttle status from OPS. Updated on every successful request. */
   public lastThrottle: ThrottleStatus | null = null;
+  /** Milliseconds the last search waited because the search quota was not green. */
+  public lastPaceMs = 0;
+  public lastPaceColor = "";
   /**
    * Deadline (epoch ms) for the current tool call. Set via startToolCall()
    * at the beginning of each MCP tool handler. The request() method checks
@@ -182,6 +185,22 @@ export class EpoClient {
     const url = `${BASE_URL}${path}`;
     let attempt = 0;
     let lastStatus = 0;
+
+    // Pace searches by the quota colour of the previous response. Agents
+    // fired 20 count_only calls in a few minutes, watched the colour go red,
+    // then hit a hard timeout; spacing on the server keeps them inside the
+    // per-minute window without each agent inventing its own sleeps.
+    if (path.startsWith("/published-data/search")) {
+      const s = this.lastThrottle?.services?.search;
+      const waits: Record<string, number> = { yellow: 3_000, orange: 12_000, red: 15_000, black: 30_000 };
+      const wait = s ? waits[s.color] ?? 0 : 0;
+      this.lastPaceMs = 0;
+      if (wait > 0 && this.deadline - Date.now() > wait + 5_000) {
+        this.lastPaceColor = s!.color;
+        await new Promise((r) => setTimeout(r, wait));
+        this.lastPaceMs = wait;
+      }
+    }
 
     while (true) {
       // Check deadline before each attempt — leave 2s margin for response processing

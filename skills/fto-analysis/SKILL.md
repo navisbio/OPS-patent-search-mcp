@@ -51,6 +51,8 @@ Example: "We want to launch an antibody-drug conjugate with a cleavable linker a
 
 ## Step 2: Search for Potentially Relevant Patents
 
+Retrieve the landscape before choosing whom to profile: run the scoping query with `detail_level="compact"` and pick the documents from what came back. Profiling two companies chosen from memory and never fetching the 91-result classification query is how a September 2026 FTO missed the third platform in the field.
+
 Build targeted CQL queries covering:
 
 1. **Feature-based search**: core product features in claims
@@ -70,6 +72,8 @@ search_patents(query='ic="A61K47/68" AND ta="topoisomerase"', count_only=true)
 Focus on patents published in the last 20 years (patents expire ~20 years from filing).
 
 ## Step 3: Legal Status Gatekeeper
+
+**No HIGH or MEDIUM risk rating without a `get_patent_legal_status` call for that exact document.** A rating on a patent whose status was never queried is an assumption presented as a finding. If the tool reports `lapsed: false` with `activeStates` present, the patent is in force in those states; do not override the tool's summary with an inference and, if you disagree with it, say why in the report.
 
 **This is the critical filter.** Before reading claims in detail, check legal status:
 
@@ -96,6 +100,8 @@ Classify each patent into:
 - SPC (Supplementary Protection Certificate) events can extend protection beyond 20 years for pharmaceuticals
 
 ## Step 4: Read Independent Claims
+
+Read the claims of the granted member (B1/B2) when the family has one; the PCT application's claims are unexamined and usually broader than what was granted. If only PCT claims are available, label them "as filed, unexamined" wherever they are quoted. If `search_in_patent_text` returns zero matches, check `textLanguage` before concluding anything: a Japanese or Chinese full text cannot match English terms.
 
 For each in-force patent, read the claims:
 
@@ -159,6 +165,8 @@ A patent only blocks you in jurisdictions where it's been filed AND granted:
 Cross-reference family members with your target markets.
 
 ## Step 7: Compile the FTO Report
+
+Before writing each company or product name, check that it appears in a tool result from this session. Corporate parents, acquisitions and brand names (who owns whom, which drug a patent covers) come from training knowledge unless a legal-status free-text field or an applicant string says so; leave them out or mark them as unverified.
 
 ### Risk Classification
 

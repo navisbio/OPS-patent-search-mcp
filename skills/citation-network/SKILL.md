@@ -111,6 +111,12 @@ The forward citation count is a key measure of influence:
 
 ## Step 4: Identify Hub Patents
 
+**Rules for any ranking in this step (the judge fails reports that break them):**
+- A `search_patents` response with `partialSample: true` (or `analyzedCount` below `totalCount`) is a newest-first window, not the field. Never publish its `topApplicants` or `yearDistribution` as a ranking. Re-run with `auto_paginate=true` and `max_results` at least `totalCount` first.
+- When you rank backward citations by their forward-citation count, count every candidate you rank and state how many of the N backward citations you checked. "Ranked by forward citations" over 6 of 92 is a sample, and the report must say so in the table heading.
+- `ct=` counts are publication counts (every family member and A/B stage). Compare candidates on the same basis, the WO member of each family, and label the column "citing publications", not "citations".
+- Cite a citation category (X, Y, A, E) only when the `category` field is present on that citation record. Applicant-cited references carry none.
+
 From both backward and forward citation data, identify hub patents:
 
 1. **Backward hubs**: Patents that appear in multiple seed patents' backward citations — the shared prior art foundation

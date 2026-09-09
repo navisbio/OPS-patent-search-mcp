@@ -17,6 +17,7 @@ import {
   parseFulltextParagraphs,
   paginateParagraphs,
   searchKeywordsInParagraphs,
+  detectFulltextLanguage,
   parseFamilyMembers,
   parseLegalEvents,
   parseCitations,
@@ -105,6 +106,9 @@ function appendThrottleInfo(data: unknown): unknown {
     ...(throttle.isThrottled && {
       warning: "EPO OPS rate limits are approaching. Space out requests or wait 1-2 minutes to avoid timeouts.",
     }),
+    ...(client.lastPaceMs > 0 && {
+      pacing: `The server waited ${client.lastPaceMs / 1000}s before this search because the search quota was ${client.lastPaceColor}. Searches are spaced automatically; do not add your own sleeps, and prefer batch tools over repeated count_only calls.`,
+    }),
   };
 
   if (typeof data === "object" && data !== null && !Array.isArray(data)) {
@@ -144,6 +148,13 @@ function computeKindFallbacks(docNumber: string, inputFormat: string): string[] 
   return ["A1", "B1"].map((k) => `${cc}.${num}.${k}`);
 }
 
+/** "US11939382B2" is how citation lists and family members spell a number;
+ *  the epodoc endpoints reject that form. Route it through docdb. */
+function normaliseDocNumber(docNumber: string, inputFormat: string): { number: string; format: string } {
+  const m = inputFormat === "epodoc" ? docNumber.trim().match(/^([A-Z]{2})(\d+)([A-Z]\d?)$/) : null;
+  return m ? { number: `${m[1]}.${m[2]}.${m[3]}`, format: "docdb" } : { number: docNumber.trim(), format: inputFormat };
+}
+
 /**
  * The OPS family endpoint rejects some numbers in epodoc format that the
  * biblio endpoint accepts (US application publications such as US2023233694,
@@ -158,6 +169,7 @@ async function getFamilyWithFormatFallback(
   light = false
 ): Promise<{ raw: string; resolvedAs: string }> {
   const fetch = (d: string, f: string) => (light ? client.getFamilyLight(d, f) : client.getFamily(d, f));
+  ({ number: docNumber, format: inputFormat } = normaliseDocNumber(docNumber, inputFormat));
   try {
     return { raw: await fetch(docNumber, inputFormat), resolvedAs: docNumber };
   } catch (e) {
@@ -182,6 +194,7 @@ async function fetchWithFamilyFallback(
   inputFormat: string,
   fetcher: (docNum: string, fmt: string) => Promise<string>
 ): Promise<{ raw: string; resolvedDocument: string; substituted: boolean }> {
+  ({ number: docNumber, format: inputFormat } = normaliseDocNumber(docNumber, inputFormat));
   try {
     const raw = await fetcher(docNumber, inputFormat);
     return { raw, resolvedDocument: docNumber, substituted: false };
@@ -630,6 +643,12 @@ Example queries:
           response.note = "totalCount includes all family/jurisdiction variants; returnedCount reflects deduplicated results in this window.";
         }
         if (detail_level === "summary") {
+          if (parsed.results.length < parsed.totalCount) {
+            // A 25-of-867 window was published as an applicant ranking twice;
+            // the analyzedCount field alone did not stop it.
+            response.partialSample = true;
+            response.sampleWarning = `Statistics below cover only ${parsed.results.length} of ${parsed.totalCount} results, the newest first. They are not a ranking of the field. Do not publish topApplicants, yearDistribution or topClassifications from this call; call again with auto_paginate=true and max_results >= ${parsed.totalCount} for the full set.`;
+          }
           Object.assign(response, computeLandscapeStats(parsed.results, parsed.totalCount));
         } else {
           response.results = projectResults(parsed.results, detail_level);
@@ -640,7 +659,9 @@ Example queries:
         const enrichedResponse = appendThrottleInfo(response);
         return {
           content: [
-            { type: "text" as const, text: JSON.stringify(enrichedResponse, null, 2) + steeringNote },
+            // The note used to be appended to the JSON text, which made the block
+            // unparseable and broke every jq-based check an agent tried.
+            { type: "text" as const, text: JSON.stringify(steeringNote ? { ...(enrichedResponse as object), steering: steeringNote.trim() } : enrichedResponse, null, 2) },
             { type: "text" as const, text: GROUNDING_NOTICE },
           ],
         };
@@ -790,7 +811,7 @@ Example queries:
       const enrichedResponse = appendThrottleInfo(response);
       return {
         content: [
-          { type: "text" as const, text: JSON.stringify(enrichedResponse, null, 2) + "\n\n" + note },
+          { type: "text" as const, text: JSON.stringify({ ...(enrichedResponse as object), note }, null, 2) },
           { type: "text" as const, text: GROUNDING_NOTICE },
         ],
       };
@@ -1266,9 +1287,15 @@ Full text is available primarily for EP, WO, and US patents.`,
       const totalChars =
         allParagraphs.length > 0 ? allParagraphs[allParagraphs.length - 1].endChar : 0;
 
+      const textLanguage = {
+        ...(claimsRaw && { claims: detectFulltextLanguage(claimsRaw).claims }),
+        ...(descRaw && { description: detectFulltextLanguage(descRaw).description }),
+      };
+      const nonEnglish = Object.values(textLanguage).some((l) => l && l !== "en");
       const result: Record<string, unknown> = {
         documentNumber: document_number,
         searchTerms: search_terms,
+        textLanguage,
         totalParagraphs: allParagraphs.length,
         claimsParagraphs: claimsCount,
         descriptionParagraphs: descParagraphs.length,
@@ -1282,7 +1309,9 @@ Full text is available primarily for EP, WO, and US patents.`,
         hint:
           enrichedMatches.length > 0
             ? `Found ${searchResult.totalMatchCount} total matches (showing ${enrichedMatches.length}). Use each match's 'sectionOffset' as the 'offset' parameter with get_patent_claims (if section=claims) or get_patent_description (if section=description) to read full text around that match.`
-            : "No matches found. Try broader or alternative terms.",
+            : nonEnglish
+              ? `No matches found, and the full text is not English (textLanguage: ${JSON.stringify(textLanguage)}). English search terms cannot match it; do not conclude the concepts are absent. Use get_patent_family to find an EP, WO or US member with English text and search that.`
+              : "No matches found. Try broader or alternative terms.",
       };
 
       if (substituted) {
@@ -1852,8 +1881,10 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
       // only in docdb format with a kind code.
       let raw: string;
       let resolvedAs = document_number;
+      const norm = normaliseDocNumber(document_number, input_format);
       try {
-        raw = await client.getLegalStatus(document_number, input_format);
+        raw = await client.getLegalStatus(norm.number, norm.format);
+        resolvedAs = norm.number;
       } catch (e) {
         const m = input_format === "epodoc" ? document_number.match(/^([A-Z]{2})(\d+)$/) : null;
         if (!(e instanceof OpsApiError) || e.status !== 404 || !m) throw e;
