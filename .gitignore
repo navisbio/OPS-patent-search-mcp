@@ -65,3 +65,6 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# python bytecode from the bench scripts
+__pycache__/
