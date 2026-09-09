@@ -104,7 +104,7 @@ SMOKETEST_MODEL=sonnet ./smoketest/run.sh   # pick the evaluator model (default:
 
 Each smoketest runs a 3-message conversation: execute the task using the MCP tools, verify entities against the database (hallucination check), then collect structured feedback on what worked and what should be improved. Results land in `smoketest/results/<timestamp>[_model]/` as `.task.txt`, `.hallucination.txt`, and `.feedback.txt` per test. The evaluator runs from a scratch directory outside the repo so the repo's own `.mcp.json` is not loaded a second time as a project server.
 
-The feedback drives development: a coding agent reads the result files, reproduces the bug-shaped findings against the live API, fixes what reproduces and reruns the bench. A person approves the proposed fix list before code changes. That gate is deliberate: once the real bugs are gone the evaluators keep producing suggestions at the same volume and confidence, so someone has to reject the reaching ones.
+Three things measure the result, none of them the evaluator's own opinion: ground-truth assertions per scenario (`smoketest/grade.py`), a separate judge model that scores each report from the tool log and can compare two runs pairwise (`smoketest/judge.py`), and a findings index that tracks which issues recur across runs (`smoketest/findings.py`). Two scenarios are hold-outs whose critiques are never collected. The fix protocol, from reproduce-before-fix to marking a finding resolved, is in [smoketest/README.md](smoketest/README.md).
 
 **Run as Claude Code plugin (local dev):**
 ```bash

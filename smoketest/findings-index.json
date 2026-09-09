@@ -1,0 +1,4645 @@
+{
+ "_doc": "Finding keys across bench runs. Edit status with findings.py resolve.",
+ "keys": {
+  "get_patent_citations.category_data_missing": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Citation category (X/Y/A) data never returned despite being advertised in tool description",
+   "tool": "get_patent_citations"
+  },
+  "get_patent_citations.max_citations_exceeds_transport_limit": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "max_citations parameter allows requesting more citations than the response transport can deliver, causing hard errors",
+   "tool": "get_patent_citations"
+  },
+  "get_patent_citations.truncation_note_passive": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Truncation signalled only as skimmable prose note, not structured fields",
+   "tool": "get_patent_citations"
+  },
+  "get_patent_citations.truncation_offset_missing": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "No offset/pagination to retrieve citations beyond the 200-item max_citations cap",
+   "tool": "get_patent_citations"
+  },
+  "get_patent_claims.ambiguous_kind_code_error_unhelpful": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Ambiguous-document error gives no candidate kind codes or resolution hint",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_claims.cn_coverage_warning_missing": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No upfront warning that CN-origin families are disproportionately likely to lack retrievable claims",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_claims.fallback_chain_dead_end": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "fallback_to_family has no fallback of its own when get_patent_family also fails, producing hard dead ends on granted US patents",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_claims.fallback_inconsistent_by_kind_code": {
+   "category": "product_bug",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "fallback_to_family fails for a B2 grant even though the same family is retrievable via a direct get_patent_family call",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_claims.fallback_to_family_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "fallback_to_family on claims lookups matched documentation and avoided manual family chasing",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_claims.markush_structures_no_text_representation": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Markush/chemical structures returned as bare unlabelled <img> tags with no SMILES/InChI/alt text, blocking chemistry-dependent FTO conclusions",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_claims.truncation_no_offset_remainder_unreachable": {
+   "category": "product_bug",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Claims truncated with nextOffset:null, leaving remainder permanently unreachable",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_claims.unavailability_structured_response": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Claims-unavailable response is a bare error string instead of structured reason + suggested alternative source",
+   "tool": "get_patent_claims"
+  },
+  "get_patent_details.array_truncation_not_flagged": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Abridged array fields (applicants/inventors) rendered as placeholder counts get silently shortened further in the final report",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.batch_duplicate_empty_stub": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Batch get_patent_details returns an empty stub duplicate alongside the populated record for the same number",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.batch_mode_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Batch mode (multiple document_numbers) efficient for parallel verification",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.batch_notfound_array_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Batch get_patent_details surfaces missing numbers via structured notFound array instead of silent gap",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.batch_silent_drops": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Batch calls silently drop failed items with no accounting",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.batch_token_limit_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Batch get_patent_details hits undocumented token-size cap well under stated maxItems:100",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.batch_verification_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Batch mode as the recommended fact-checking workflow is not explicitly documented",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.complete_biblio_single_lookup_praise": {
+   "category": "praise",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Single-number lookup returned complete, cross-tool-consistent bibliographic data",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.duplicate_records_no_kind_code": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "get_patent_details returns two near-duplicate records for one publication number with no field to disambiguate them",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.epodoc_coverage_scope_understated": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "epodoc lookup fails on ordinary US A1 publications not covered by the tool's stated docdb-required list",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.epodoc_kind_code_mismatch": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "get_patent_details rejects kind-code-suffixed numbers as produced by get_patent_citations",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.kind_code_status_inferred_as_fact": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "B1 kind code presented as '(granted)' status without a legal-status call to confirm",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.multiple_kind_codes_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Returns both A1/B1 kind-code records for a publication number instead of silently picking one",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.no_auto_docdb_fallback": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "get_patent_details doesn't auto-retry with docdb+kind code when epodoc lookup fails",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.no_bulk_existence_check_mode": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No lightweight bulk existence-check endpoint for verification workflows",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.no_computed_expiry_estimate": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "No computed base-term expiry estimate field",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.nondeterministic_epodoc_resolution": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Identical epodoc lookups return inconsistent found/notFound results across calls in same session",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.not_found_silent": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "epodoc lookups return successful-looking empty object instead of not-found error",
+   "tool": "get_patent_details"
+  },
+  "get_patent_details.spc_certificate_notfound_no_redirect": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "SPC/certificate number lookups return bare notFound instead of a typed redirect to the basic patent",
+   "tool": "get_patent_details"
+  },
+  "get_patent_family.broad_inpadoc_merge_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Tool description doesn't warn that large families may merge unrelated priority chains for prolific filers",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.countries_filter_masks_true_family_size": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "countries filter silently reduces reported familySize without flagging the unfiltered total",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.countries_filter_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "countries filter isolates relevant family member from large INPADOC family",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.distinct_family_disambiguation_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "get_patent_family correctly distinguished genuinely separate inventions from assumed duplicates",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.divisional_trap_detection_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "get_patent_family caught divisional-application citation-undercount trap",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.duplicate_member_fetch_redundant": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Same INPADOC family re-fetched via two different member numbers with no dedup",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.error_mode_undistinguished": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "get_patent_family error message doesn't distinguish 'unknown to OPS' from 'known but no INPADOC family record'",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.no_applicant_variant_flag": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "get_patent_family doesn't flag when raw applicant strings differ across members of the same family",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.no_batch_mode": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No batch version of get_patent_family analogous to get_patent_details document_numbers[]",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.no_citation_aggregation": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No pre-aggregated forward-citation totals across a patent family",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.no_citation_cross_reference": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No inverse lookup from national filing number to the heavily-cited family member",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.no_inline_biblio_details": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No option to include biblio data inline with family results",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.no_size_cap_or_summary_mode": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "No size cap, filtering, or summary-only mode for very large INPADOC families",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.resolution_inconsistent_with_details": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "get_patent_family fails on document numbers that get_patent_details resolves successfully",
+   "tool": "get_patent_family"
+  },
+  "get_patent_family.spc_discovery_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Family pull surfaced SPC certificate numbers no keyword search would find",
+   "tool": "get_patent_family"
+  },
+  "get_patent_legal_status.condensed_filter_noise_reduction_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "condensed + event_types filter cut noise dramatically",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.condensed_unfiltered_detail_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "condensed=true without event_types filter surfaced SPC/enforcement detail directly in freeText",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.contradictory_active_lapsed_states": {
+   "category": "product_bug",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Same jurisdiction listed in both lapsedStates and activeStates with lapsed:false",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.event_types_filter_breaks_status": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "event_types filter zeroes out statusSummary (granted/spcOrPte) instead of just filtering echoed events",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.no_as_of_date_snapshot": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No as-of-date snapshot parameter for reconstructing historical legal status",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.no_batch_mode": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "No batch mode for get_patent_legal_status analogous to get_patent_details batch mode",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.no_national_phase_entry_status": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No dedicated national-phase-entry lookup; entry/non-entry must be inferred from scattered legal events",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.no_pta_event_type": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "event_types enum lacks a PTA category, hiding US patent term adjustment",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.no_structured_spc_expiry_field": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No structured/computed SPC expiry field; caller must hand-apply 5-year-cap formula from free text",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.non_epo_uspto_coverage_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Unclear whether legal-status tool reliably parses JPO/CNIPA/KIPO event codes",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.resolution_inconsistent_with_other_tools": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "get_patent_legal_status fails on a document number that get_patent_details and get_patent_family resolve successfully, blocking gatekeeper check",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.spc_certificate_number_empty": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Legal status returns empty for SPC certificate publication numbers instead of pointing to basic patent",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.spc_details_not_populated": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "spcOrPteDetails array stays empty even when SPC national filings are present in raw legal events",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.spc_flag_false_negative": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "spcOrPte flag reports false while SPCs actually exist in the family",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.spc_national_coverage_gap_unflagged": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No confidence flag when activeStates includes countries absent from spcStates (SPC-register coverage gap)",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.spc_pte_applied_vs_granted_conflated": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "spcOrPte flag/statusSummary doesn't distinguish extension applied-for from granted",
+   "tool": "get_patent_legal_status"
+  },
+  "get_patent_legal_status.status_summary_active_lapsed_split_praise": {
+   "category": "praise",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "activeStates/lapsedStates split gave FTO-shaped output without manual event parsing",
+   "tool": "get_patent_legal_status"
+  },
+  "harness.background_wait_workaround_unreliable": {
+   "category": "harness_artifact",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "harness_artifact",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Bash sleep blocked, background-wait workaround unreliable and coincided with MCP disconnection",
+   "tool": "harness"
+  },
+  "harness.standalone_mcp_connection_closed": {
+   "category": "harness_artifact",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_075801_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "reflection prompt states the server is intentionally unloaded; runner cwd outside repo",
+   "occurrences": [
+    {
+     "category": "harness_artifact",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Standalone MCP server connection closed at session start",
+   "tool": "harness"
+  },
+  "harness.tool_disconnection": {
+   "category": "harness_artifact",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_075801_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "note": "reflection prompt states the server is intentionally unloaded; runner cwd outside repo",
+   "occurrences": [
+    {
+     "category": "harness_artifact",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P1",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P1",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "harness_artifact",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "7 of 9 tools disconnected mid-session and were never exercised",
+   "tool": "harness"
+  },
+  "harness.tool_reregistration_between_turns": {
+   "category": "harness_artifact",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "harness_artifact",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Standalone MCP connection stayed dead all session and plugin tools deregistered between turns, requiring repeated ToolSearch reloads",
+   "tool": "harness"
+  },
+  "none.abandoned_retry_time_pressure": {
+   "category": "agent_error",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Agent abandoned a promising retry (US kind-code format) for get_patent_legal_status under time pressure, leaving in-force status unresolved",
+   "tool": "none"
+  },
+  "none.aggregate_numbers_untraceable_to_tool_output": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Final aggregate publication/family estimate not traceable to any tool call",
+   "tool": "none"
+  },
+  "none.and_with_unique_filter_masks_clause_match": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Verifying applicant via pa= ANDed with a unique pn= masks whether the pa= clause actually matched",
+   "tool": "search_patents"
+  },
+  "none.applicant_variant_additive_overcount": {
+   "category": "agent_error",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P1",
+     "source": "critique"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Agent additively summed unmerged applicant name-variant counts, shipping a wrong total",
+   "tool": "none"
+  },
+  "none.circular_verification_no_independent_source": {
+   "category": "workflow_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Verification workflow re-queries the same OPS index that produced the original claim, giving no independent existence check",
+   "tool": "none"
+  },
+  "none.claim_scope_asserted_without_retrieved_claims": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P1",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Specific claim language and claim scope asserted from a truncated/unreadable or claims-absent record",
+   "tool": "none"
+  },
+  "none.claims_never_read_on_determinative_patent": {
+   "category": "agent_error",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Agent never verified granted claims read on pembrolizumab for the two determinative LOE patents",
+   "tool": "none"
+  },
+  "none.existence_only_verification_agent_error": {
+   "category": "agent_error",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Agent used existence-only search_patents queries for verification instead of batch get_patent_details, missing field-level checks",
+   "tool": "none"
+  },
+  "none.fabricated_observation_in_quality_gate": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Report fabricates a Renagade duplicate-applicant correction that no tool call ever returned",
+   "tool": "none"
+  },
+  "none.fact_misattributed_to_wrong_document": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Claim-scope fact attributed to a document whose abstract was never retrieved",
+   "tool": "none"
+  },
+  "none.family_membership_misattributed_from_priority_claims": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Application-number-shaped priorityClaims value reported in the narrative as family membership",
+   "tool": "none"
+  },
+  "none.family_relationship_asserted_without_tool_call": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Family/national-phase relationships stated in report without any get_patent_family call to support them",
+   "tool": "get_patent_family"
+  },
+  "none.grounding_footer_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "GROUNDING footer and legal disclaimer useful for hallucination-check guidance",
+   "tool": "none"
+  },
+  "none.inferred_expiry_presented_as_verified": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Expiry status presented as confirmed when it was arithmetic inference contradicted by tool output",
+   "tool": "none"
+  },
+  "none.landscape_never_retrieved_false_quota_attribution": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "Landscape queries sized (49, 91 hits) but never fetched, omission wrongly blamed on search-quota limits",
+   "tool": "none"
+  },
+  "none.landscape_single_axis_no_cross_check": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P1",
+     "source": "both"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Company landscape table built entirely from one ta= query axis, never cross-checked by classification or applicant queries",
+   "tool": "none"
+  },
+  "none.mixed_query_scopes_in_single_table": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Applicant comparison table mixes counts from incompatible query scopes with only a partial caveat",
+   "tool": "none"
+  },
+  "none.no_current_owner_assignment_field": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No field indicating current owner/assignment after corporate M&A",
+   "tool": "none"
+  },
+  "none.no_multi_hop_citation_tool": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No single-call multi-hop citation network expansion tool",
+   "tool": "none"
+  },
+  "none.primary_query_missing_task_subject_term": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Primary landscape query dropped the task's 'vaccine' term, invalidating downstream applicant/CPC/concentration conclusions",
+   "tool": "search_patents"
+  },
+  "none.sized_candidate_never_retrieved": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "count_only=1 candidate query never followed up with retrieval",
+   "tool": "search_patents"
+  },
+  "none.state_count_arithmetic_mismatch": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Reported EP contracting-state count doesn't match the quoted list length",
+   "tool": "none"
+  },
+  "none.throttle_block_verbosity": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Full _throttle quota block repeated on every response even when all statuses are green",
+   "tool": "none"
+  },
+  "none.throttle_quota_signal_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "_throttle quota block gives passive rate-limit visibility",
+   "tool": "none"
+  },
+  "none.throttle_status_unclear_semantics": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Throttle status flickers without clear correlation to call volume, no retry_after signal",
+   "tool": "none"
+  },
+  "none.trailing_footer_breaks_json_parsing": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Trailing non-JSON footer text appended after closing brace breaks JSON parsers",
+   "tool": "search_patents"
+  },
+  "none.undisclosed_partial_citation_coverage": {
+   "category": "agent_error",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Report shipped with backward-citation section built on <half of actual citations, unflagged",
+   "tool": "none"
+  },
+  "none.unsourced_corporate_and_mechanism_labels": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Corporate parent and mechanism labels stated without tool-result support",
+   "tool": "none"
+  },
+  "none.unsourced_jurisdiction_causal_explanations": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Invented causal explanations for jurisdiction filing counts not supported by any query",
+   "tool": "none"
+  },
+  "none.verification_claimed_but_not_performed": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Report claimed family verification for Mirati that was never performed",
+   "tool": "none"
+  },
+  "none.verification_query_scope_mismatch": {
+   "category": "agent_error",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Non-identical re-run of verification query produced false discrepancy alarm",
+   "tool": "none"
+  },
+  "none.year_distribution_misread_as_filing_year": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "judge"
+    },
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Year distribution statistics misread as filing years and outlier buckets left unexplained",
+   "tool": "none"
+  },
+  "none.zero_hit_applicant_query_misread": {
+   "category": "agent_error",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Zero-hit pa=\"GSK*\" misread as a recall-methodology finding instead of an applicant-name mismatch",
+   "tool": "none"
+  },
+  "ops.cn_jp_fulltext_coverage_gap": {
+   "category": "external_limitation",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "note": "EPO OPS offers no such data or parameter",
+   "occurrences": [
+    {
+     "category": "external_limitation",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "external_limitation",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "external_limitation",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "external",
+   "title": "CN and JP full-text coverage gaps blocked verification of the earliest-priority candidates",
+   "tool": "ops"
+  },
+  "ops.cn_national_phase_unavailable": {
+   "category": "external_limitation",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "external_limitation",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No CNIPA legal status or reliable claims coverage for Chinese national-phase filings, undocumented upfront",
+   "tool": "ops"
+  },
+  "ops.granted_claims_coverage_gap": {
+   "category": "external_limitation",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "EPO OPS offers no such data or parameter",
+   "occurrences": [
+    {
+     "category": "external_limitation",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "external",
+   "title": "Granted (B1/B2) claims essentially never indexed, forcing as-filed fallback that can overstate scope",
+   "tool": "ops"
+  },
+  "ops.spc_term_expiry_unavailable": {
+   "category": "external_limitation",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "note": "EPO OPS offers no such data or parameter",
+   "occurrences": [
+    {
+     "category": "external_limitation",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "external_limitation",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "external",
+   "title": "No exact SPC/PTE expiry or granted term available anywhere in the toolset",
+   "tool": "ops"
+  },
+  "search_in_patent_text.claim_scope_verification_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "search_in_patent_text used to confirm claim scope rather than trusting generic titles",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.deterministic_rerun_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "search_in_patent_text results are byte-for-byte reproducible on re-run, enabling verification",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.fallback_inconsistent_jp_cn": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "fallback_to_family auto-resolution works for US-rooted families but not for JP-rooted ones",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.fallback_to_family_transparency_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "fallback_to_family resolution transparently reported via note/resolvedDocuments fields",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.language_not_surfaced": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "both"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Zero-match result on non-English full text gives generic breadth hint instead of a language field",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.limit_round_robin_order_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "limit round-robins across search_terms per-keyword, but nothing states this, so returned snippets get mislabeled as 'first N' document-order matches",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.match_cap_accounting_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "returnedByKeyword + matchCountByKeyword let agent report accurate total despite 30-snippet cap",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.match_cap_frequency_bias": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "30-match cap fills with highest-frequency keyword, silently suppressing rarer keywords",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.multi_keyword_batch_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Multi-term search_in_patent_text with per-keyword match breakdown avoided redundant separate searches",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.no_batch_mode": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No batch mode for search_in_patent_text across multiple documents with shared search terms",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.no_count_only_mode": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "search_in_patent_text lacks a count_only mode for cheap re-verification",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.section_offset_contract_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "sectionOffset output maps directly onto get_patent_claims/get_patent_description offset param",
+   "tool": "search_in_patent_text"
+  },
+  "search_in_patent_text.truncation_disclosure_not_enforced": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "truncated:true and retrieval hint returned by the tool were dropped from the final report",
+   "tool": "search_in_patent_text"
+  },
+  "search_patents.aggregation_count_mismatch": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "topApplicants summary counts disagree with raw pa=/ct= count_only counts on same dataset",
+   "tool": "search_patents"
+  },
+  "search_patents.applicant_entity_conflation_no_exclusion": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "pa= wildcard conflates unrelated same-named companies (Merck & Co vs Merck KGaA) with no exclusion operator",
+   "tool": "search_patents"
+  },
+  "search_patents.applicant_match_semantics_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Unclear whether pa=/in= applicant search does exact-phrase or tokenized matching",
+   "tool": "search_patents"
+  },
+  "search_patents.batch_verification_crossref_missing": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "search_patents description doesn't cross-reference batch get_patent_details as preferred verification method",
+   "tool": "search_patents"
+  },
+  "search_patents.classification_wildcard_unsupported": {
+   "category": "external_limitation",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "EPO OPS offers no such data or parameter",
+   "occurrences": [
+    {
+     "category": "external_limitation",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "external",
+   "title": "IPC/CPC prefix wildcarding (ic=\"A61K48/\") doesn't work, blocking classification-based scoping",
+   "tool": "search_patents"
+  },
+  "search_patents.compact_applicant_field_single_value": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "compact detail_level collapses applicants to one field, obscuring whether pa= filter actually matched",
+   "tool": "search_patents"
+  },
+  "search_patents.compact_triage_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "detail_level=compact is an effective cheap default for triage scanning",
+   "tool": "search_patents"
+  },
+  "search_patents.count_only_missing_caveat": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "count_only=true response omits family/jurisdiction-variant caveat present in full/compact responses",
+   "tool": "search_patents"
+  },
+  "search_patents.count_only_no_estimated_families": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "count_only mode doesn't expose estimatedFamilies equivalent",
+   "tool": "search_patents"
+  },
+  "search_patents.count_only_no_query_echo": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "count_only responses don't echo the resolved/normalized CQL query",
+   "tool": "search_patents"
+  },
+  "search_patents.count_only_nondeterministic": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "count_only and detail_level=compact return different totalCount for the identical query moments apart",
+   "tool": "search_patents"
+  },
+  "search_patents.count_only_sizing_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "keyword-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "count_only=true effective for cheap query sizing before full retrieval",
+   "tool": "search_patents"
+  },
+  "search_patents.cql_field_choice_agent_error": {
+   "category": "agent_error",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "agent_error",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Agent used wrong payload-class terminology in ta= query, producing 0 results",
+   "tool": "search_patents"
+  },
+  "search_patents.cql_syntax_error_no_token_identified": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "CQL syntax error gives a character offset but not the offending token or a resolution hint",
+   "tool": "search_patents"
+  },
+  "search_patents.dedup_note_conditional": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "totalCount/returnedCount dedup explanatory note appears only conditionally instead of whenever counts diverge",
+   "tool": "search_patents"
+  },
+  "search_patents.default_sort_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "iteration 1, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Default sort order not stated in tool description",
+   "tool": "search_patents"
+  },
+  "search_patents.deterministic_rerun_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "summary results reproducible byte-for-byte on re-run, enabling verification",
+   "tool": "search_patents"
+  },
+  "search_patents.duplicate_query_refetch_on_detail_level_change": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Changing only detail_level on an identical auto-paginated query refetches the entire 162-record result set",
+   "tool": "search_patents"
+  },
+  "search_patents.estimated_families_inaccurate": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "estimatedFamilies undercounts when same-titled filings from one applicant are genuinely separate families",
+   "tool": "search_patents"
+  },
+  "search_patents.full_detail_token_limit_exceeded": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "Full detail_level retrieval on moderate result sets exceeds max token limit",
+   "tool": "search_patents"
+  },
+  "search_patents.fulltext_cql_fields_unreliable": {
+   "category": "external_limitation",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "external_limitation",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "CQL full-text search biased toward title/abstract, not claims, undermining FTO-relevant recall",
+   "tool": "search_patents"
+  },
+  "search_patents.national_phase_citation_undercount_silent": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "ct= citation search returns 0 for national-phase numbers even when the family is heavily cited, with no warning",
+   "tool": "search_patents"
+  },
+  "search_patents.no_applicant_identity_lookup": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No way to verify an applicant's organizational identity independent of one patent record",
+   "tool": "search_patents"
+  },
+  "search_patents.no_applicant_name_lookup": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No way to disambiguate/canonicalize applicant names before querying",
+   "tool": "search_patents"
+  },
+  "search_patents.no_applicant_portfolio_breakdown": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No single call for per-applicant jurisdiction/family/year breakdown, requiring N separate pa= queries",
+   "tool": "search_patents"
+  },
+  "search_patents.no_applicant_variant_breakdown": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "topApplicants entries don't expose raw name variants folded into normalized bucket",
+   "tool": "search_patents"
+  },
+  "search_patents.no_batch_applicant_verification": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No batch tool to verify a list of claimed applicant counts in one call",
+   "tool": "search_patents"
+  },
+  "search_patents.no_batch_citation_count": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No way to query multiple ct= values in a single call for hub-candidate comparison",
+   "tool": "search_patents"
+  },
+  "search_patents.no_clause_level_zero_match_warning": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "No warning field when one clause of an ANDed query matches zero results",
+   "tool": "search_patents"
+  },
+  "search_patents.no_concept_to_classification_lookup": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No lookup helper from plain-English concept to candidate CPC/IPC classification code",
+   "tool": "search_patents"
+  },
+  "search_patents.no_confidence_coverage_indicator": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No coverage/confidence signal to distinguish an under-indexed query from a genuinely empty result set",
+   "tool": "search_patents"
+  },
+  "search_patents.no_family_count_in_summary": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No family-level count per top-applicant in summary output; only publication counts",
+   "tool": "search_patents"
+  },
+  "search_patents.no_family_dedup_grouping": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "No native family-level dedup/grouping for a whole search result set",
+   "tool": "search_patents"
+  },
+  "search_patents.no_family_exclusion_filter": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No built-in filter to exclude/flag seed-family members from a citing-patent result set",
+   "tool": "search_patents"
+  },
+  "search_patents.no_field_match_verification": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "keyword-search",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No way to verify a claimed applicant/title pair against a known publication number with a match/mismatch result",
+   "tool": "search_patents"
+  },
+  "search_patents.no_indication_or_mechanism_field": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No structured indication/mechanism-class field, forcing abstract text inference",
+   "tool": "search_patents"
+  },
+  "search_patents.no_kind_code_filter": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No kind-code filter to restrict to granted (B-kind) documents",
+   "tool": "search_patents"
+  },
+  "search_patents.no_legal_status_in_results": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No cheap in-force/legal-status flag available at search/detail_level without a per-patent legal-status call",
+   "tool": "search_patents"
+  },
+  "search_patents.no_priority_number_field": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No CQL field to search forward from priority number to resulting publication",
+   "tool": "search_patents"
+  },
+  "search_patents.no_query_diff_recall_crosscheck": {
+   "category": "feature_request",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No diff-queries mode to systematically surface recall gaps like missing major applicants",
+   "tool": "search_patents"
+  },
+  "search_patents.no_relevance_or_citation_sort": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "EPO OPS offers no such data or parameter",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "external",
+   "title": "No relevance/citation-count sort key for 'top patents' queries",
+   "tool": "search_patents"
+  },
+  "search_patents.no_sort_parameter": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "note": "EPO OPS offers no such data or parameter",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "external",
+   "title": "No sort parameter on search_patents; citation search results default to newest-first",
+   "tool": "search_patents"
+  },
+  "search_patents.no_structure_search": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No SMILES/substructure or scaffold-based search field",
+   "tool": "search_patents"
+  },
+  "search_patents.no_synonym_expansion_option": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No synonym/variant expansion option for ta= queries",
+   "tool": "search_patents"
+  },
+  "search_patents.no_unscoped_applicant_query_warning": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No warning when a pa= applicant query lacks a topic/classification co-filter",
+   "tool": "search_patents"
+  },
+  "search_patents.no_verify_count_convenience_call": {
+   "category": "feature_request",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No convenience call to re-run a base query scoped to one applicant for verification",
+   "tool": "search_patents"
+  },
+  "search_patents.or_query_dedup_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "OR-query dedup effect on combined applicant counts is correct but undocumented",
+   "tool": "search_patents"
+  },
+  "search_patents.pn_existence_check_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "pn= existence checks give a fast, unambiguous pass/fail signal",
+   "tool": "search_patents"
+  },
+  "search_patents.range_pagination_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "basic-search",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "range_start/range_end gives precise top-N retrieval without over-fetching",
+   "tool": "search_patents"
+  },
+  "search_patents.redundant_scope_sweeps_unused_pagination": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Redundant scope sweeps and an unused full pagination inflated call count without improving the report",
+   "tool": "search_patents"
+  },
+  "search_patents.summary_landscape_aggregation_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    },
+    {
+     "category": "praise",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "detail_level=summary with auto_paginate gives full landscape in one call",
+   "tool": "search_patents"
+  },
+  "search_patents.ta_and_query_silent_applicant_recall_gap": {
+   "category": "product_bug",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Multi-term ta= AND query silently omitted the field's largest applicants with no warning",
+   "tool": "search_patents"
+  },
+  "search_patents.ta_query_homonym_false_positives": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "ta= phrase queries silently pull in unrelated homonyms with no documented mitigation",
+   "tool": "search_patents"
+  },
+  "search_patents.ta_recall_gap_method_of_use": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "ta= search under-matches method-of-use/dosing patents with generic titles",
+   "tool": "search_patents"
+  },
+  "search_patents.throttled_result_no_partial_flag": {
+   "category": "product_bug",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No explicit signal when a result was returned during a throttled/red quota state",
+   "tool": "search_patents"
+  },
+  "search_patents.topapplicants_capped_no_truncation_flag": {
+   "category": "product_bug",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "topApplicants silently capped at 12 entries with no truncation flag or topN parameter",
+   "tool": "search_patents"
+  },
+  "search_patents.topapplicants_count_conflated_with_family_count": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "topApplicants publication counts presented in the report as family counts",
+   "tool": "search_patents"
+  },
+  "search_patents.wildcard_error_message_unhelpful": {
+   "category": "description_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "fixed_in": "20260909_015052_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "note": "iteration 2, 2026-09-09",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "fixed",
+   "title": "CQL wildcard validation error doesn't identify which token failed",
+   "tool": "search_patents"
+  },
+  "search_patents.year_distribution_basis_undocumented": {
+   "category": "description_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "yearDistribution is publication-year, mixes A/B-kind duplicates of the same invention, and offers no priority-year or kind filter",
+   "tool": "search_patents"
+  },
+  "search_patents.year_distribution_outlier_unexplained": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No way to inspect why anomalous outlier years appear in year distribution",
+   "tool": "search_patents"
+  },
+  "search_patents.zero_result_diagnostic_hint": {
+   "category": "feature_request",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "feature_request",
+     "run": "20260908_234759_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "No diagnostic hint when a ta= field query returns 0 results unexpectedly",
+   "tool": "search_patents"
+  },
+  "skill.applicant_alias_correction_not_propagated": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Discovered applicant-alias gap (Merck vs Organon/MSD) not propagated to re-run all affected queries",
+   "tool": "skill"
+  },
+  "skill.applicant_discrepancy_caveat_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Skill's caveat on summary vs pa= count divergence correctly predicted discrepancy",
+   "tool": "skill"
+  },
+  "skill.applicant_normalization_incomplete": {
+   "category": "description_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "description_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "description_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "landscape-doublecount",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "product_bug",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Applicant name normalization doesn't cover CN/SG dual-entity structures or CJK co-applicant duplication",
+   "tool": "skill"
+  },
+  "skill.citation_network_example_numbers_stale": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "citation-network",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Citation-network skill's worked example citation counts don't match actual current data for the same seed patent",
+   "tool": "skill"
+  },
+  "skill.company_facts_warning_placement_late": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "'No training-knowledge company facts' rule buried at end of skill instead of at report-compilation step",
+   "tool": "skill"
+  },
+  "skill.fallback_substitution_disclosure_missing": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P3",
+     "source": "critique"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Skill doesn't instruct agents to check resolvedDocuments and disclose fallback substitution when citing claims",
+   "tool": "skill"
+  },
+  "skill.fto_analysis_skill_structure_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "fto-analysis skill structure (legal-status gatekeeper, element mapping, mandatory biblio verification) produced a defensible, hallucination-audit-clean report",
+   "tool": "skill"
+  },
+  "skill.granted_claims_fallback_guidance_missing": {
+   "category": "workflow_gap",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260908_234759_sonnet",
+     "scenario": "fto-check",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "fto-analysis skill doesn't warn that the claims family-fallback chain can itself fail, or suggest a manual alternative",
+   "tool": "skill"
+  },
+  "skill.granted_claims_gap_not_flagged_upfront": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "fto-check",
+     "severity": "P3",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "fto-analysis skill doesn't warn upfront that granted claims are essentially never available",
+   "tool": "skill"
+  },
+  "skill.landscape_workflow_stages_praise": {
+   "category": "praise",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_004506_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260909_004506_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "patent-landscape skill's four-stage funnel workflow held up in practice",
+   "tool": "skill"
+  },
+  "skill.layered_search_strategy_praise": {
+   "category": "praise",
+   "first_seen": "20260908_234759_sonnet",
+   "last_seen": "20260908_234759_sonnet",
+   "occurrences": [
+    {
+     "category": "praise",
+     "run": "20260908_234759_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "none",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "loe-analysis layered search strategy produced correctly classified families",
+   "tool": "skill"
+  },
+  "skill.no_citation_ranking_for_key_patents": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "Skill doesn't force a citation pass, so 'Key Patents' selection omits the foundational patents the report itself flags as dominant",
+   "tool": "skill"
+  },
+  "skill.no_claims_read_checkpoint": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_004506_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_004506_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P3",
+     "source": "both"
+    }
+   ],
+   "status": "open",
+   "title": "loe-analysis skill doesn't force a claims-read checkpoint on the determinative patent",
+   "tool": "skill"
+  },
+  "skill.no_legal_status_checkpoint_per_risk_row": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "fto-check",
+     "severity": "P1",
+     "source": "judge"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "judge"
+    },
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "prior-art-skill",
+     "severity": "P2",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "Risk table rows given in-force status without a corresponding legal-status call",
+   "tool": "skill"
+  },
+  "skill.orange_book_template_wrong_for_biologics": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "loe-analysis",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "loe-analysis skill's Orange Book template misdirects biologic (BLA) analyses that belong in the Purple Book",
+   "tool": "skill"
+  },
+  "skill.quality_gate_biblio_only": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P1",
+     "source": "judge"
+    }
+   ],
+   "status": "open",
+   "title": "'Quality gate' only re-verifies bibliographic fields, letting unverified claim/status/family assertions ship",
+   "tool": "skill"
+  },
+  "skill.recall_crosscheck_not_mandated": {
+   "category": "workflow_gap",
+   "first_seen": "20260909_015052_sonnet",
+   "last_seen": "20260909_015052_sonnet",
+   "occurrences": [
+    {
+     "category": "workflow_gap",
+     "run": "20260909_015052_sonnet",
+     "scenario": "patent-landscape",
+     "severity": "P2",
+     "source": "critique"
+    }
+   ],
+   "status": "open",
+   "title": "Skill doesn't mandate a recall cross-check against known major applicants before finalizing the applicant table",
+   "tool": "skill"
+  }
+ }
+}

@@ -1,0 +1,113 @@
+{
+  "_doc": "Bench catalog. Each scenario is one evaluator session: task, grounding check, critique (dev suite only). ground_truth assertions are checked by grade.py against the final report (task.txt) and the tool-call stream. Keep assertions to facts that are stable over months: known filers, known family members, structural facts. Never exact live counts. Suites: dev scenarios feed critiques to the coding agent; holdout scenarios are graded and judged but their critiques are not collected, so improvement on them cannot come from reading their feedback.",
+  "scenarios": [
+    {
+      "id": "basic-search",
+      "suite": "dev",
+      "max_turns": 8,
+      "max_budget_usd": 2.0,
+      "prompt": "Search for patents about CRISPR Cas9 gene editing. Use count_only=true first, then retrieve the 5 most recent results with detail_level=full. Report the publication numbers, titles, and applicants, and say explicitly that these are the most recent publications, not the most significant.",
+      "ground_truth": [
+        {"type": "stream_tool_called", "tool": "search_patents", "input_contains": "\"count_only\": true", "why": "sizing step the prompt requires"},
+        {"type": "report_regex_count_min", "pattern": "\\b(?:EP|US|WO|CN|KR|JP|BE|GB|DE)\\d{6,}\\b", "min": 5, "why": "five publication numbers"},
+        {"type": "report_regex_any", "patterns": ["most recent", "newest", "publication date"], "why": "must state the ordering"}
+      ]
+    },
+    {
+      "id": "keyword-search",
+      "suite": "dev",
+      "max_turns": 8,
+      "max_budget_usd": 2.0,
+      "prompt": "Get the bibliographic data for patent EP3401400, then search its full text for the keywords 'guide RNA' and 'Cas9'. Report the match count and show the first 3 context snippets.",
+      "ground_truth": [
+        {"type": "stream_tool_called", "tool": "search_in_patent_text", "why": "the full-text search must be used, not guessed"},
+        {"type": "report_regex_all", "patterns": ["EP3401400", "Charpentier|CHARPENTIER", "Doudna|DOUDNA"], "why": "biblio facts stable since 2018"},
+        {"type": "report_regex_any", "patterns": ["Cas9[^\\n]{0,60}\\b7[4-6]\\d\\b", "\\b7[4-6]\\d\\b[^\\n]{0,60}Cas9"], "why": "Cas9 occurs ~756 times in the fixed text; a report far from that read the wrong document"}
+      ]
+    },
+    {
+      "id": "existence-check",
+      "suite": "dev",
+      "max_turns": 8,
+      "max_budget_usd": 2.0,
+      "prompt": "Check whether each of these patent publications exists and, for the ones that do, report the title and first applicant: EP3401400, US8354509, EP9999999, NL300788I2. Be explicit about any number that cannot be resolved.",
+      "ground_truth": [
+        {"type": "report_regex_all", "patterns": ["EP3401400[^\\n]{0,200}(CRISPR|Cas9|RNA)", "US8354509[^\\n]{0,200}(PD-1|programmed death|Organon|ORGANON|MSD)"], "why": "two real patents with stable titles"},
+        {"type": "report_regex_any", "patterns": ["EP9999999[^\\n]{0,160}(not found|no record|does not exist|not exist|could not|cannot|no bibliographic|unresolv|invalid)"], "why": "the fake number must be reported as unresolved, never given a title"},
+        {"type": "report_regex_none", "patterns": ["EP9999999[^\\n]{0,80}(applicant|inventor)[^\\n]{0,40}:"], "why": "no fabricated applicant for the fake number"},
+        {"type": "stream_notfound_includes", "number": "EP9999999", "why": "the tool, not the model, must have said not found"}
+      ]
+    },
+    {
+      "id": "prior-art-skill",
+      "suite": "dev",
+      "max_turns": 0,
+      "max_budget_usd": 0,
+      "prompt": "Run a prior art search for: a bispecific antibody targeting both PD-1 and TIGIT for treatment of non-small cell lung cancer. Follow the prior-art-search skill workflow and produce the full structured prior art report.",
+      "ground_truth": [
+        {"type": "report_regex_min_matches", "patterns": ["MedImmune|MEDIMMUNE|AstraZeneca", "GenSun|GENSUN", "Xencor|XENCOR", "Compugen|COMPUGEN", "Merck|MERCK", "Roche|ROCHE|Genentech|GENENTECH"], "min": 3, "why": "known filers in this space"},
+        {"type": "report_regex_any", "patterns": ["US2022411509", "WO2022229919", "US11939382"], "why": "the family whose claims recite NSCLC is the closest prior art and must be found"},
+        {"type": "stream_tool_called", "tool": "search_in_patent_text", "why": "indication language lives in claims, not abstracts"}
+      ]
+    },
+    {
+      "id": "fto-check",
+      "suite": "dev",
+      "max_turns": 0,
+      "max_budget_usd": 0,
+      "prompt": "Perform a freedom-to-operate check for: an antibody-drug conjugate with a cleavable linker and a topoisomerase-I inhibitor payload. Follow the fto-analysis skill workflow and produce the full FTO risk report.",
+      "ground_truth": [
+        {"type": "report_regex_min_matches", "patterns": ["Daiichi|DAIICHI", "Immunomedics|IMMUNOMEDICS|Gilead|GILEAD", "MedImmune|MEDIMMUNE|AstraZeneca|ASTRAZENECA", "Seagen|SEAGEN|Seattle Genetics", "Kelun|KELUN"], "min": 2, "why": "the two dominant platforms (deruxtecan, SN-38) must appear"},
+        {"type": "stream_tool_called", "tool": "get_patent_legal_status", "why": "the skill's gatekeeper step"},
+        {"type": "stream_tool_called", "tool": "get_patent_claims", "why": "claims must be read, not inferred from abstracts"}
+      ]
+    },
+    {
+      "id": "citation-network",
+      "suite": "holdout",
+      "max_turns": 0,
+      "max_budget_usd": 0,
+      "prompt": "Build a citation network starting from patent EP3401400. Get its backward citations, then check forward citations using the ct= CQL operator. Identify the most-cited patents. Follow the citation-network skill workflow and produce the full citation network report.",
+      "ground_truth": [
+        {"type": "report_regex_all", "patterns": ["WO2013176772"], "why": "the divisional trap: forward citations sit on the parent PCT"},
+        {"type": "stream_tool_called", "tool": "get_patent_family", "why": "step 0 of the skill"},
+        {"type": "stream_tool_called", "tool": "get_patent_citations", "why": "backward citations"},
+        {"type": "stream_no_partial_summary_published", "why": "a ranking from a 25-result sample must not be published as if complete"}
+      ]
+    },
+    {
+      "id": "patent-landscape",
+      "suite": "dev",
+      "max_turns": 0,
+      "max_budget_usd": 0,
+      "prompt": "Produce a patent landscape analysis for mRNA vaccine delivery using lipid nanoparticles. Follow the patent-landscape skill workflow. Map top applicants, filing trends by year, key technology sub-areas, and identify white spaces. Produce the full landscape report.",
+      "ground_truth": [
+        {"type": "report_regex_min_matches", "patterns": ["Moderna|MODERNA", "BioNTech|BIONTECH", "Acuitas|ACUITAS", "Arbutus|ARBUTUS", "Genevant|GENEVANT", "Arcturus|ARCTURUS", "CureVac|CUREVAC", "Pfizer|PFIZER", "Translate Bio|TRANSLATE BIO|Sanofi|SANOFI"], "min": 4, "why": "a landscape that misses the major LNP filers is wrong even if every number in it is real"},
+        {"type": "stream_tool_called", "tool": "search_patents", "input_contains": "\"detail_level\": \"summary\"", "why": "landscape statistics come from summary mode"}
+      ]
+    },
+    {
+      "id": "loe-analysis",
+      "suite": "dev",
+      "max_turns": 0,
+      "max_budget_usd": 0,
+      "prompt": "Perform a loss-of-exclusivity analysis for Keytruda (pembrolizumab, Merck). Follow the loe-analysis skill workflow. Identify compound, formulation, and method-of-use patents. Check legal status and family coverage for US and EU markets. Produce the full LOE timeline and report.",
+      "ground_truth": [
+        {"type": "report_regex_all", "patterns": ["EP2170959", "US8354509", "SPC|supplementary protection"], "why": "the compound patent family and its SPCs are the core of any Keytruda LOE"},
+        {"type": "report_regex_any", "patterns": ["Organon|ORGANON", "MSD"], "why": "the compound patent's applicant of record is Organon/MSD, not Merck"},
+        {"type": "stream_tool_called", "tool": "get_patent_legal_status", "input_contains": "EP2170959", "why": "SPC states come from the basic patent's legal status"}
+      ]
+    },
+    {
+      "id": "landscape-doublecount",
+      "suite": "holdout",
+      "max_turns": 0,
+      "max_budget_usd": 0,
+      "prompt": "Give me an overview of patents filed in pan-RAS inhibition. Which are the companies active in the space? Which indications do they present data for? For each company, report the number of patent families and list the key patent numbers.",
+      "ground_truth": [
+        {"type": "report_regex_min_matches", "patterns": ["Revolution Medicines|REVOLUTION MEDICINES", "Mirati|MIRATI", "Erasca|ERASCA", "Adlai Nortye|ADLAI NORTYE", "KHR|Khr Biotec", "Boehringer|BOEHRINGER"], "min": 3, "why": "known pan-RAS filers"},
+        {"type": "stream_tool_called", "tool": "get_patent_family", "why": "family counts need family lookups, not title heuristics"}
+      ]
+    }
+  ]
+}
