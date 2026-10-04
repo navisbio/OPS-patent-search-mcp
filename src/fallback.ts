@@ -1,4 +1,4 @@
-import { EpoClient, OpsApiError } from "./epo-client.js";
+import { EpoClient, OpsApiError, isRateLimitError } from "./epo-client.js";
 import { parseFamilyMembers } from "./parsers.js";
 
 /** Compute alternative kind codes to try for a document number before family fallback. */
@@ -83,7 +83,8 @@ export async function fetchWithFamilyFallback(
     try {
       const raw = await fetcher(alt, "docdb");
       return { raw, resolvedDocument: alt, substituted: true };
-    } catch {
+    } catch (e) {
+      if (isRateLimitError(e)) throw e;
       // try next kind code
     }
   }
@@ -93,12 +94,14 @@ export async function fetchWithFamilyFallback(
   try {
     familyRaw = (await getFamilyWithFormatFallback(client, docNumber, inputFormat)).raw;
   } catch (e) {
+    if (isRateLimitError(e)) throw e;
     // Very large families (Xencor, Immunomedics) are refused with "smaller
     // chunks"; the light variant still lists members, which is all we need.
     if (e instanceof OpsApiError && e.message.includes("smaller chunks")) {
       try {
         familyRaw = (await getFamilyWithFormatFallback(client, docNumber, inputFormat, true)).raw;
-      } catch {
+      } catch (inner) {
+        if (isRateLimitError(inner)) throw inner;
         throw new OpsApiError(
           404,
           `Full text not available for ${docNumber} and could not retrieve patent family for fallback.`
@@ -135,7 +138,8 @@ export async function fetchWithFamilyFallback(
     try {
       const raw = await fetcher(docdbNum, "docdb");
       return { raw, resolvedDocument: docdbNum, substituted: true };
-    } catch {
+    } catch (e) {
+      if (isRateLimitError(e)) throw e;
       // try next member
     }
   }

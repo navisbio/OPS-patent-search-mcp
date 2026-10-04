@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { EpoClient, OpsApiError } from "../epo-client.js";
+import { EpoClient, OpsApiError, isRateLimitError } from "../epo-client.js";
 import { parseFamilyMembers, type FamilyMember } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { getFamilyWithFormatFallback } from "../fallback.js";
@@ -68,7 +68,8 @@ Response: { familySize, countByCountry, returned, members[] }. countByCountry al
         try {
           const { raw, resolvedAs } = await getFamilyWithFormatFallback(client, document_number, input_format, true);
           return shape(parseFamilyMembers(raw), resolvedAs, "Large family retrieved without biblio data; titles may be missing. Use get_patent_details on individual members.");
-        } catch {
+        } catch (inner) {
+          if (isRateLimitError(inner)) return errorResult(inner);
           return jsonResult({
             error: "family_too_large",
             documentNumber: document_number,

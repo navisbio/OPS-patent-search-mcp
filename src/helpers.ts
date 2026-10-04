@@ -1,4 +1,5 @@
 import type { ThrottleStatus } from "./epo-client.js";
+import { isRateLimitError, rateLimitDetails } from "./epo-client.js";
 
 export const GROUNDING_NOTICE =
   "GROUNDING: Only patent numbers, dates, names, and text that appear in this response may be cited in your output. Never supplement with patent numbers from your own knowledge. When quoting patent claims or description passages, use the exact text returned here — do not paraphrase from memory.";
@@ -7,6 +8,9 @@ type ThrottleSource = { lastThrottle: ThrottleStatus | null };
 
 export function createHelpers(client: ThrottleSource) {
   function errorResult(e: unknown) {
+    if (isRateLimitError(e)) {
+      return { ...jsonResult(rateLimitDetails(e)), isError: true };
+    }
     const msg = e instanceof Error ? e.message : String(e);
     const throttle = client.lastThrottle;
     const parts = [`Error: ${msg}`];

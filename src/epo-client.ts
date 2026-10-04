@@ -61,12 +61,31 @@ export class OpsApiError extends Error {
   public readonly status: number;
   public readonly code: string;
 
-  constructor(status: number, message: string, code: string = "") {
+  constructor(status: number, message: string, code: string = "", public readonly retryAfterSeconds?: number) {
     super(message);
     this.name = "OpsApiError";
     this.status = status;
     this.code = code;
   }
+}
+
+/** Includes legacy deadline errors emitted after rate-limit retries. */
+export function isRateLimitError(e: unknown): e is OpsApiError {
+  return e instanceof OpsApiError && (
+    e.status === 403 || e.status === 429 || e.code === "RATE_LIMIT" ||
+    (e.code === "TOOL_TIMEOUT" && /rate limited/i.test(e.message))
+  );
+}
+
+export function rateLimitDetails(e: OpsApiError) {
+  return {
+    error: "rate_limited" as const,
+    httpStatus: e.status,
+    code: e.code,
+    message: e.message,
+    ...(e.retryAfterSeconds !== undefined && { retryAfterSeconds: e.retryAfterSeconds }),
+    hint: "Retrieval was interrupted by EPO OPS rate limiting. Unchecked text is unknown; do not interpret it as absent. Wait before retrying.",
+  };
 }
 
 /** Extract a human-readable message from OPS XML error responses. */
@@ -182,14 +201,14 @@ export class EpoClient {
     const url = `${BASE_URL}${path}`;
     let attempt = 0;
     let lastStatus = 0;
+    let lastRateLimitError: OpsApiError | undefined;
 
     while (true) {
       // Check deadline before each attempt — leave 2s margin for response processing
       const remaining = this.deadline - Date.now();
       if (remaining < 2_000) {
-        const reason = this.wasRateLimited
-          ? `Tool call timeout reached. Rate limited by EPO OPS — too many requests in this session. Wait 1-2 minutes before retrying.`
-          : `Tool call timeout reached. EPO OPS did not respond in time (last HTTP status: ${lastStatus || "timeout"}). The service may be slow or temporarily unavailable.`;
+        if (lastRateLimitError) throw lastRateLimitError;
+        const reason = `Tool call timeout reached. EPO OPS did not respond in time (last HTTP status: ${lastStatus || "timeout"}). The service may be slow or temporarily unavailable.`;
         throw new OpsApiError(408, reason, "TOOL_TIMEOUT");
       }
 
@@ -239,19 +258,30 @@ export class EpoClient {
         const retryAfter = resp.headers.get("Retry-After");
         let delay: number;
         if (retryAfter) {
-          delay = (parseInt(retryAfter, 10) || 1) * 1000;
+          const seconds = Number(retryAfter);
+          const date = Date.parse(retryAfter);
+          delay = Number.isFinite(seconds) ? Math.max(0, seconds * 1000)
+            : Number.isFinite(date) ? Math.max(0, date - Date.now()) : 1000;
         } else {
           delay = BACKOFF_BASE_MS * 2 ** Math.min(attempt, 4);
         }
         if (isRateLimit) delay = Math.max(delay, 5_000);
+        if (isRateLimit) {
+          lastRateLimitError = new OpsApiError(resp.status,
+            "Rate limited by EPO OPS. Retrieval could not finish within the tool time budget. Wait before retrying.",
+            "RATE_LIMIT", Math.ceil(delay / 1000));
+        }
 
         // Only retry if we have enough time left
         if (this.deadline - Date.now() > delay + 3_000) {
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }
-        // Not enough time — fall through to deadline check at top of loop
-        continue;
+        // Preserve the failing HTTP status instead of spinning until a generic timeout.
+        if (isRateLimit) {
+          throw lastRateLimitError;
+        }
+        throw new OpsApiError(resp.status, "EPO OPS service failed and there is insufficient time to retry.", "RETRY_EXHAUSTED");
       }
 
       const text = await resp.text();

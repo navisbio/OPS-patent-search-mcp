@@ -19,6 +19,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "test": "npx tsx tests/integration.ts",
+    "test:unit": "tsx --test tests/unit/*.ts",
     "test:integration": "npx tsx tests/integration.ts",
     "test:scenarios": "npx tsx integration_tests/run-all.ts"
   },

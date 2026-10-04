@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { EpoClient } from "../epo-client.js";
+import { type EpoClient, type OpsApiError, isRateLimitError, rateLimitDetails } from "../epo-client.js";
 import { parseSearchResults, parseFulltextParagraphs, searchKeywordsInParagraphs } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { fetchWithFamilyFallback } from "../fallback.js";
@@ -126,7 +126,10 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
       // Reserve enough of the deadline to serialise and return what we have.
       const RESERVE_MS = 8_000;
       let scanned = 0;
+      let checked = 0;
       let truncated = false;
+      let rateLimitError: OpsApiError | undefined;
+      let interruptedDocument: string | undefined;
 
       for (const item of candidates) {
         if (client.timeRemaining < RESERVE_MS) {
@@ -152,7 +155,13 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
             } else {
               claimsRaw = await client.getClaims(doc, "epodoc");
             }
-          } catch {
+          } catch (e) {
+            if (isRateLimitError(e)) {
+              rateLimitError = e;
+              interruptedDocument = doc;
+              truncated = true;
+              break;
+            }
             // no claims for this document
           }
         }
@@ -168,7 +177,13 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
             } else {
               descRaw = await client.getDescription(srcDoc, srcFmt);
             }
-          } catch {
+          } catch (e) {
+            if (isRateLimitError(e)) {
+              rateLimitError = e;
+              interruptedDocument = doc;
+              truncated = true;
+              break;
+            }
             // no description for this document
           }
         }
@@ -185,6 +200,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         const claimsParagraphs = claimsRaw ? parseFulltextParagraphs(claimsRaw) : [];
         const descParagraphs = descRaw ? parseFulltextParagraphs(descRaw) : [];
         const allParagraphs = [...claimsParagraphs, ...descParagraphs];
+        if (allParagraphs.length > 0) checked++;
         let idx = 0;
         for (const p of allParagraphs) p.index = idx++;
 
@@ -234,7 +250,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
       }
       if (totalCount > candidates.length) {
         notes.push(
-          `The CQL query matched ${totalCount} patents; ${candidates.length} were checked for full text. Patents beyond that were not examined.`
+          `The CQL query matched ${totalCount} publications; ${scanned} retrievals were attempted and ${checked} documents had text checked. Publications beyond those attempts were not examined.`
         );
       }
       if (deprioritised) {
@@ -248,12 +264,18 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         );
       }
 
-      return jsonResult(
+      const response = jsonResult(
         {
           query: cql,
           totalCount,
           scanned,
+          checked,
           truncated,
+          ...(rateLimitError && {
+            partial: true,
+            rateLimit: rateLimitDetails(rateLimitError),
+            interruptedDocument,
+          }),
           matchMode: match_mode,
           sectionsChecked: section_filter ?? ["claims", "description"],
           filterTerms: filter_terms,
@@ -262,12 +284,15 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
           skipped,
           ...(notes.length > 0 ? { notes } : {}),
           hint:
-            matched.length > 0
+            rateLimitError
+              ? `EPO OPS rate limiting interrupted retrieval for ${interruptedDocument}. Preserved ${matched.length} matches from earlier documents. The interrupted document and remaining candidates are unknown, not negative results. Wait before retrying.`
+              : matched.length > 0
               ? `${matched.length} of ${scanned} scanned patents contain the terms. Use a snippet's sectionOffset as the offset for get_patent_claims (section=claims) or get_patent_description (section=description) to read further.`
               : `None of the ${scanned} scanned patents contained ${match_mode === "all" ? "all of" : "any of"} the terms. Try match_mode="any", broader terms, or drop section_filter.`,
         },
         { grounding: true }
       );
+      return rateLimitError ? { ...response, isError: true } : response;
     } catch (e) {
       return errorResult(e);
     }

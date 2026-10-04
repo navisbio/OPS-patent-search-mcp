@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { EpoClient, OpsApiError } from "../epo-client.js";
+import { EpoClient, OpsApiError, isRateLimitError, rateLimitDetails } from "../epo-client.js";
 import { parseSearchResults, type SearchResultItem } from "../parsers.js";
 import { createHelpers, GROUNDING_NOTICE } from "../helpers.js";
 import { computeLandscapeStats, projectResults, buildDateCql } from "../search.js";
@@ -199,6 +199,8 @@ Example queries:
       const peekRaw = await client.search(cql, 1, 1);
       const { totalCount: grandTotal } = parseSearchResults(peekRaw);
 
+      let rateLimitError: OpsApiError | undefined;
+
       /** Paginate a single CQL expression up to `budget` results, appending to `collector`.
        *  Returns { pageTotal, error? } — on API failure, returns partial results with the error. */
       async function paginateInto(
@@ -216,6 +218,7 @@ Example queries:
           try {
             raw = await client.search(pageCql, start, pageEnd);
           } catch (e) {
+            if (isRateLimitError(e)) rateLimitError = e;
             const msg = e instanceof Error ? e.message : String(e);
             return { pageTotal, error: `Pagination stopped at position ${start}: ${msg}` };
           }
@@ -305,6 +308,7 @@ Example queries:
       const response: Record<string, unknown> = {
         totalCount: grandTotal,
         fetchedCount: allResults.length,
+        ...(rateLimitError && { rateLimit: rateLimitDetails(rateLimitError) }),
         ...(fullDetailCapNote && { fullDetailCapNote }),
         ...(paginationErrors.length > 0 && {
           partial: true,
@@ -330,6 +334,7 @@ Example queries:
 
       const enrichedResponse = appendThrottleInfo(response);
       return {
+        ...(rateLimitError && { isError: true }),
         content: [
           { type: "text" as const, text: JSON.stringify(enrichedResponse, null, 2) + "\n\n" + note },
           { type: "text" as const, text: GROUNDING_NOTICE },

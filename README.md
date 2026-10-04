@@ -87,6 +87,7 @@ When installed as a Claude Code plugin, guided workflow skills become available.
 ```bash
 npm install
 npm run build              # Compile TypeScript → dist/
+npm run test:unit          # Offline regression tests (no credentials needed)
 npm test                   # Integration tests (requires PATENT_CONSUMER_KEY and PATENT_CONSUMER_SECRET_KEY in .env)
 ```
 

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { EpoClient } from "../epo-client.js";
+import { type EpoClient, type OpsApiError, isRateLimitError, rateLimitDetails } from "../epo-client.js";
 import { parseFulltextParagraphs, searchKeywordsInParagraphs } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { fetchWithFamilyFallback } from "../fallback.js";
@@ -76,6 +76,7 @@ Full text is available primarily for EP, WO, and US patents.`,
       // Fetch both claims and description — falling back to family if needed
       let claimsRaw: string | null = null;
       let descRaw: string | null = null;
+      let rateLimitError: OpsApiError | undefined;
 
       if (fallback_to_family) {
         // Try claims with fallback
@@ -90,7 +91,8 @@ Full text is available primarily for EP, WO, and US patents.`,
             resolvedClaimsDoc = result.resolvedDocument;
             substituted = true;
           }
-        } catch {
+        } catch (e) {
+          if (isRateLimitError(e)) rateLimitError = e;
           // claims unavailable
         }
 
@@ -98,6 +100,7 @@ Full text is available primarily for EP, WO, and US patents.`,
         const descDoc = substituted ? resolvedClaimsDoc : document_number;
         const descFmt = substituted ? "docdb" : input_format;
         try {
+          if (rateLimitError) throw rateLimitError;
           const result = await fetchWithFamilyFallback(client,
             descDoc,
             descFmt,
@@ -108,15 +111,27 @@ Full text is available primarily for EP, WO, and US patents.`,
             resolvedDescDoc = result.resolvedDocument;
             substituted = true;
           }
-        } catch {
+        } catch (e) {
+          if (isRateLimitError(e)) rateLimitError = e;
           // description unavailable
         }
       } else {
-        claimsRaw = await client.getClaims(document_number, input_format).catch(() => null);
-        descRaw = await client.getDescription(document_number, input_format).catch(() => null);
+        try {
+          claimsRaw = await client.getClaims(document_number, input_format);
+        } catch (e) {
+          if (isRateLimitError(e)) rateLimitError = e;
+        }
+        if (!rateLimitError) {
+          try {
+            descRaw = await client.getDescription(document_number, input_format);
+          } catch (e) {
+            if (isRateLimitError(e)) rateLimitError = e;
+          }
+        }
       }
 
       if (!claimsRaw && !descRaw) {
+        if (rateLimitError) return errorResult(rateLimitError);
         return {
           content: [{
             type: "text" as const,
@@ -153,6 +168,7 @@ Full text is available primarily for EP, WO, and US patents.`,
       const result: Record<string, unknown> = {
         documentNumber: document_number,
         searchTerms: search_terms,
+        ...(rateLimitError && { partial: true, rateLimit: rateLimitDetails(rateLimitError) }),
         totalParagraphs: allParagraphs.length,
         claimsParagraphs: claimsCount,
         descriptionParagraphs: descParagraphs.length,
@@ -164,7 +180,9 @@ Full text is available primarily for EP, WO, and US patents.`,
         matchCount: enrichedMatches.length,
         matches: enrichedMatches,
         hint:
-          enrichedMatches.length > 0
+          rateLimitError
+            ? "EPO OPS rate limiting interrupted text retrieval. Matches cover only the retrieved text; unavailable sections are unknown, not absent. Wait before retrying."
+            : enrichedMatches.length > 0
             ? `Found ${searchResult.totalMatchCount} total matches (showing ${enrichedMatches.length}). Use each match's 'sectionOffset' as the 'offset' parameter with get_patent_claims (if section=claims) or get_patent_description (if section=description) to read full text around that match.`
             : "No matches found. Try broader or alternative terms.",
       };
@@ -174,7 +192,8 @@ Full text is available primarily for EP, WO, and US patents.`,
         result.resolvedDocuments = { claims: resolvedClaimsDoc, description: resolvedDescDoc };
       }
 
-      return jsonResult(result, { grounding: true });
+      const response = jsonResult(result, { grounding: true });
+      return rateLimitError ? { ...response, isError: true } : response;
     } catch (e) {
       return errorResult(e);
     }
