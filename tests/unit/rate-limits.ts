@@ -42,7 +42,7 @@ const filterArgs = { query: 'ta="target"', filter_terms: ['target'], match_mode:
   max_patents_to_scan: 3, context_chars: 150, max_snippets_per_patent: 3, case_sensitive: false, fallback_to_family: false };
 const textArgs = { document_number: 'EP1000001', input_format: 'epodoc', search_terms: ['target'],
   context_chars: 150, limit: 30, case_sensitive: false, fallback_to_family: false };
-const data = (r: any) => JSON.parse(r.content[0].text.split('\n\n')[0]);
+const data = (r: any) => JSON.parse(r.content[0].text);
 
 for (const status of [403, 429]) {
   test(`HTTP ${status} preserves status and Retry-After when retry budget is exhausted`, async () => {
@@ -185,4 +185,50 @@ test('successful kind fallback still returns full text', async () => {
     if (++requests === 1) return unavailable(); return claims;
   });
   assert.equal(result.raw, claims); assert.equal(result.substituted, true); assert.equal(requests, 2);
+});
+
+
+test('kind-suffixed fulltext input is normalized and still propagates rate limits', async () => {
+  let requests = 0;
+  const error = limited();
+  await assert.rejects(fetchWithFamilyFallback(client(), ' US11939382B2 ', 'epodoc', async (number, format) => {
+    requests++;
+    assert.equal(number, 'US.11939382.B2'); assert.equal(format, 'docdb');
+    throw error;
+  }), (e: unknown) => e === error);
+  assert.equal(requests, 1);
+});
+test('rate-limit interruption takes precedence over non-English zero-match guidance', async () => {
+  const japanese = JSON.stringify({ 'ops:world-patent-data': {
+    'ftxt:fulltext-documents': { 'ftxt:fulltext-document': {
+      claims: { '@lang': 'ja', claim: { 'claim-text': { $: '日本語の特許文書' } } },
+    } },
+  } });
+  const r = await invoke(registerSearchInPatentText, client({ getClaims: async () => japanese,
+    getDescription: async () => { throw limited(); } }), textArgs);
+  const d = data(r);
+  assert.equal(r.isError, true); assert.equal(d.partial, true); assert.equal(d.textLanguage.claims, 'ja');
+  assert.equal(d.matchCount, 0); assert.match(d.hint, /rate limiting interrupted/);
+});
+test('single-page summary includes partial sample warning and valid JSON steering', async () => {
+  const r = await invoke(registerSearchPatents, client({ search: async () => search(200) }), {
+    query: 'ta="target"', range_start: 1, range_end: 25, count_only: false,
+    detail_level: 'summary', auto_paginate: false, max_results: 200,
+  });
+  const d = data(r);
+  assert.equal(d.partialSample, true); assert.match(d.sampleWarning, /only 3 of 200/);
+  assert.match(d.steering, /Showing results/);
+});
+test('partial pagination keeps both pacing metadata and structured rate-limit evidence', async () => {
+  let requests = 0;
+  const r = await invoke(registerSearchPatents, client({
+    lastPaceMs: 3000, lastPaceColor: 'yellow',
+    lastThrottle: { overallStatus: 'yellow', isThrottled: false, services: {} },
+    search: async () => { if (++requests === 3) throw limited(); return search(200); },
+  }), { query: 'ta="target"', range_start: 1, range_end: 25, count_only: false,
+    detail_level: 'compact', auto_paginate: true, max_results: 200 });
+  const d = data(r);
+  assert.equal(r.isError, true); assert.equal(d.rateLimit.httpStatus, 429);
+  assert.match(d._throttle.pacing, /waited 3s/); assert.match(d.note, /WARNING/);
+  assert.equal(d.results.length, 3);
 });

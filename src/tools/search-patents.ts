@@ -171,6 +171,12 @@ Example queries:
           response.note = "totalCount includes all family/jurisdiction variants; returnedCount reflects deduplicated results in this window.";
         }
         if (detail_level === "summary") {
+          if (parsed.results.length < parsed.totalCount) {
+            // A 25-of-867 window was published as an applicant ranking twice;
+            // the analyzedCount field alone did not stop it.
+            response.partialSample = true;
+            response.sampleWarning = `Statistics below cover only ${parsed.results.length} of ${parsed.totalCount} results, the newest first. They are not a ranking of the field. Do not publish topApplicants, yearDistribution or topClassifications from this call; call again with auto_paginate=true and max_results >= ${parsed.totalCount} for the full set.`;
+          }
           Object.assign(response, computeLandscapeStats(parsed.results, parsed.totalCount));
         } else {
           response.results = projectResults(parsed.results, detail_level);
@@ -181,7 +187,7 @@ Example queries:
         const enrichedResponse = appendThrottleInfo(response);
         return {
           content: [
-            { type: "text" as const, text: JSON.stringify(enrichedResponse, null, 2) + steeringNote },
+            { type: "text" as const, text: JSON.stringify(steeringNote ? { ...(enrichedResponse as object), steering: steeringNote.trim() } : enrichedResponse, null, 2) },
             { type: "text" as const, text: GROUNDING_NOTICE },
           ],
         };
@@ -336,7 +342,7 @@ Example queries:
       return {
         ...(rateLimitError && { isError: true }),
         content: [
-          { type: "text" as const, text: JSON.stringify(enrichedResponse, null, 2) + "\n\n" + note },
+          { type: "text" as const, text: JSON.stringify({ ...(enrichedResponse as object), note }, null, 2) },
           { type: "text" as const, text: GROUNDING_NOTICE },
         ],
       };

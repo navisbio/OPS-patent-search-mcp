@@ -4,7 +4,7 @@ import { isRateLimitError, rateLimitDetails } from "./epo-client.js";
 export const GROUNDING_NOTICE =
   "GROUNDING: Only patent numbers, dates, names, and text that appear in this response may be cited in your output. Never supplement with patent numbers from your own knowledge. When quoting patent claims or description passages, use the exact text returned here — do not paraphrase from memory.";
 
-type ThrottleSource = { lastThrottle: ThrottleStatus | null };
+type ThrottleSource = { lastThrottle: ThrottleStatus | null; lastPaceMs?: number; lastPaceColor?: string };
 
 export function createHelpers(client: ThrottleSource) {
   function errorResult(e: unknown) {
@@ -67,6 +67,9 @@ export function createHelpers(client: ThrottleSource) {
       quota,
       ...(throttle.isThrottled && {
         warning: "EPO OPS rate limits are approaching. Space out requests or wait 1-2 minutes to avoid timeouts.",
+      }),
+      ...((client.lastPaceMs ?? 0) > 0 && {
+        pacing: `The server waited ${client.lastPaceMs! / 1000}s before this search because the search quota was ${client.lastPaceColor}. Searches are spaced automatically; do not add your own sleeps, and prefer batch tools over repeated count_only calls.`,
       }),
     };
 

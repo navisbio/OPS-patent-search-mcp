@@ -3,6 +3,7 @@ import { z } from "zod";
 import { EpoClient, OpsApiError, isRateLimitError } from "../epo-client.js";
 import { parseLegalEvents, type LegalEvent } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
+import { normaliseDocNumber } from "../fallback.js";
 import { isGrantEvent, isSpcEvent, summarizeLegalStatus } from "../legal.js";
 import { documentNumberParam, inputFormatParam } from "./params.js";
 
@@ -51,8 +52,10 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
       // only in docdb format with a kind code.
       let raw: string;
       let resolvedAs = document_number;
+      const norm = normaliseDocNumber(document_number, input_format);
       try {
-        raw = await client.getLegalStatus(document_number, input_format);
+        raw = await client.getLegalStatus(norm.number, norm.format);
+        resolvedAs = norm.number;
       } catch (e) {
         const m = input_format === "epodoc" ? document_number.match(/^([A-Z]{2})(\d+)$/) : null;
         if (!(e instanceof OpsApiError) || e.status !== 404 || !m) throw e;

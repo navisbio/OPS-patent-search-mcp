@@ -50,6 +50,8 @@ Translate these into CQL building blocks:
 
 ## Step 2: Build Scoping Queries
 
+**The primary query must contain every concept in the task.** For "mRNA vaccine delivery using lipid nanoparticles" a query without a vaccine term measures the LNP delivery field, and every statistic derived from it answers a different question. Write the task's concepts down first and check each query against the list before sizing it.
+
 Create 2-3 queries that define the landscape boundaries:
 
 1. **Core query**: The tightest definition of the technology
@@ -131,6 +133,8 @@ search_patents(query='...', auto_paginate=true, detail_level="summary",
 From the summary/compact data, extract insights in these categories:
 
 ### 5a. Applicant Analysis
+**Mandatory cross-check before any applicant table is written.** Pick three to five filers you would expect in this field and run `pa="NAME*"` with the same topic scope as the primary query. A filer with a large portfolio that is absent from `topApplicants` means the primary query under-recalled; widen it (OR synonyms, add a classification query) and rebuild the table. One September 2026 landscape missed every major LNP filer this way and nothing in the tool output said so. Never add name-variant rows together: `HOFFMANN LA ROCHE` 7 plus `F HOFFMANN-LA ROCHE` 5 is not 12; run one OR query and report that count.
+
 - **Top 10-20 applicants** by filing volume
 - **Market share** — what percentage of total filings does each top applicant hold?
 - **Applicant type** — corporate vs. academic vs. government
@@ -139,6 +143,8 @@ From the summary/compact data, extract insights in these categories:
 Note: Applicant names vary (e.g., "MODERNA INC", "MODERNA TX INC", "MODERNATX INC"). The tool normalizes common variants, but flag any suspected duplicates.
 
 ### 5b. Filing Trends
+`yearDistribution` is by publication year and mixes A (application) and B (grant) publications of the same invention. Say so, and compare a partial current year on a per-month basis before calling the trend accelerating.
+
 - **Overall trajectory** — growing, plateauing, or declining?
 - **Inflection points** — years where filing volume jumped (correlate with technology breakthroughs or regulatory events)
 - **Recent momentum** — are filings accelerating or decelerating in the last 2-3 years?
@@ -149,6 +155,8 @@ Note: Applicant names vary (e.g., "MODERNA INC", "MODERNA TX INC", "MODERNATX IN
 - **Under-represented classes** — potential white space
 
 ## Step 6: Deep Dives on Segments of Interest
+
+A "key patent" claim needs data: `get_patent_legal_status` for its status, `get_patent_family` for its coverage, and `get_patent_claims` before any statement about what it claims. Abstracts do not describe claim scope. If the report says a lineage of foundational patents dominates the field, those patents must be in the key-patents table.
 
 Based on the landscape overview, drill into specific segments:
 

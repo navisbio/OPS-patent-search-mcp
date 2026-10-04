@@ -350,6 +350,31 @@ export function parseFulltextParagraphs(json: string): Paragraph[] {
   return paragraphs;
 }
 
+/** Language of the claims and description in an OPS full-text response.
+ *  OPS labels each section with @lang; when it is missing, a CJK character
+ *  ratio decides. A Japanese-text WO produced zero keyword matches and a
+ *  "not discussed" conclusion before this was surfaced. */
+export function detectFulltextLanguage(json: string): { claims?: string; description?: string } {
+  let data: any;
+  try { data = JSON.parse(json); } catch { return {}; }
+  const doc = data?.["ops:world-patent-data"]?.["ftxt:fulltext-documents"]?.["ftxt:fulltext-document"];
+  if (!doc) return {};
+  const guess = (node: any, texts: string[]): string | undefined => {
+    const lang = node?.["@lang"];
+    if (typeof lang === "string" && lang) return lang.toLowerCase();
+    const sample = texts.join(" ").slice(0, 2000);
+    if (!sample) return undefined;
+    const cjk = (sample.match(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g) || []).length;
+    return cjk / sample.length > 0.2 ? "cjk" : "en";
+  };
+  const claimTexts = asArray(doc?.claims?.claim).flatMap((c: any) => asArray(c?.["claim-text"]).map(extractText));
+  const descTexts = asArray(doc?.description?.p).map(extractText);
+  return {
+    claims: doc?.claims ? guess(doc.claims, claimTexts) : undefined,
+    description: doc?.description ? guess(doc.description, descTexts) : undefined,
+  };
+}
+
 /* ---------- paginated fulltext ---------- */
 
 export interface PaginatedText {

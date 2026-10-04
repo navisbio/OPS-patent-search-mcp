@@ -77,6 +77,8 @@ search_patents(query='(ta="pembrolizumab" OR ta="MK-3475") AND (ta="formulation"
 ```
 
 ### Layer 3: Method-of-use / indication patents
+Use the applicant of record from the compound patent's biblio, not the marketing company. Keytruda's compound patent lists Organon and MSD, so `pa="MERCK*"` misses it and the method-of-use families with it. Re-run every layer with the applicant strings the compound family actually carries.
+
 Cover specific therapeutic uses — can block specific indications even after compound patent expires.
 
 ```
@@ -102,6 +104,8 @@ search_patents(query='(ta="pembrolizumab" OR ta="anti-PD-1") AND ta="combination
 
 ## Step 3: Classify Patents by Type and Strength
 
+Read the claims (`get_patent_claims`) of every patent the report names as decisive for the LOE date. A method-of-use patent "blocks only identical follow-on products" is a claim-scope statement and cannot be made from a title.
+
 Organize found patents into categories:
 
 | Category | Strength | Typical Expiry | Impact |
@@ -115,6 +119,8 @@ Organize found patents into categories:
 For each patent, note the **priority date** — this is needed for expiry estimation.
 
 ## Step 4: Legal Status — The Core of LOE Analysis
+
+Query legal status for each US family member that could carry the compound claims, not only the first one. A twelve-member US family with one status call is one data point, and the report must not present it as the US position.
 
 For each key patent family, check legal status:
 
@@ -134,6 +140,8 @@ Look for these critical events:
 - **Expiry** — reached end of term
 
 ### Patent term extensions
+A `PTEF` event is an application for extension; only `PTEG` (or a statement that the extension was granted) means the term moved. Do not add a requested extension to the expiry date. Report it as "PTE of N days requested, not shown as granted" and give both dates.
+
 - **SPC (Supplementary Protection Certificate)** — extends protection for up to 5 years in Europe for pharmaceuticals
 - **PTE (Patent Term Extension)** — US equivalent under 35 USC §156, up to 5 years
 - **Pediatric extension** — additional 6 months in US/EU for pediatric studies

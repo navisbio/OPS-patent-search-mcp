@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { type EpoClient, type OpsApiError, isRateLimitError, rateLimitDetails } from "../epo-client.js";
-import { parseFulltextParagraphs, searchKeywordsInParagraphs } from "../parsers.js";
+import { parseFulltextParagraphs, searchKeywordsInParagraphs, detectFulltextLanguage } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { fetchWithFamilyFallback } from "../fallback.js";
 import { documentNumberParam, inputFormatParam, fallbackToFamilyParam } from "./params.js";
@@ -165,10 +165,16 @@ Full text is available primarily for EP, WO, and US patents.`,
       const totalChars =
         allParagraphs.length > 0 ? allParagraphs[allParagraphs.length - 1].endChar : 0;
 
+      const textLanguage = {
+        ...(claimsRaw && { claims: detectFulltextLanguage(claimsRaw).claims }),
+        ...(descRaw && { description: detectFulltextLanguage(descRaw).description }),
+      };
+      const nonEnglish = Object.values(textLanguage).some((l) => l && l !== "en");
       const result: Record<string, unknown> = {
         documentNumber: document_number,
         searchTerms: search_terms,
         ...(rateLimitError && { partial: true, rateLimit: rateLimitDetails(rateLimitError) }),
+        textLanguage,
         totalParagraphs: allParagraphs.length,
         claimsParagraphs: claimsCount,
         descriptionParagraphs: descParagraphs.length,
@@ -184,7 +190,9 @@ Full text is available primarily for EP, WO, and US patents.`,
             ? "EPO OPS rate limiting interrupted text retrieval. Matches cover only the retrieved text; unavailable sections are unknown, not absent. Wait before retrying."
             : enrichedMatches.length > 0
             ? `Found ${searchResult.totalMatchCount} total matches (showing ${enrichedMatches.length}). Use each match's 'sectionOffset' as the 'offset' parameter with get_patent_claims (if section=claims) or get_patent_description (if section=description) to read full text around that match.`
-            : "No matches found. Try broader or alternative terms.",
+            : nonEnglish
+              ? `No matches found, and the full text is not English (textLanguage: ${JSON.stringify(textLanguage)}). English search terms cannot match it; do not conclude the concepts are absent. Use get_patent_family to find an EP, WO or US member with English text and search that.`
+              : "No matches found. Try broader or alternative terms.",
       };
 
       if (substituted) {

@@ -23,6 +23,13 @@ export function computeKindFallbacks(docNumber: string, inputFormat: string): st
   return ["A1", "B1"].map((k) => `${cc}.${num}.${k}`);
 }
 
+/** "US11939382B2" is how citation lists and family members spell a number;
+ *  the epodoc endpoints reject that form. Route it through docdb. */
+export function normaliseDocNumber(docNumber: string, inputFormat: string): { number: string; format: string } {
+  const m = inputFormat === "epodoc" ? docNumber.trim().match(/^([A-Z]{2})(\d+)([A-Z]\d?)$/) : null;
+  return m ? { number: `${m[1]}.${m[2]}.${m[3]}`, format: "docdb" } : { number: docNumber.trim(), format: inputFormat };
+}
+
 /**
  * The OPS family endpoint rejects some numbers in epodoc format that the
  * biblio endpoint accepts (US application publications such as US2023233694,
@@ -38,6 +45,7 @@ export async function getFamilyWithFormatFallback(
   light = false
 ): Promise<{ raw: string; resolvedAs: string }> {
   const fetch = (d: string, f: string) => (light ? client.getFamilyLight(d, f) : client.getFamily(d, f));
+  ({ number: docNumber, format: inputFormat } = normaliseDocNumber(docNumber, inputFormat));
   try {
     return { raw: await fetch(docNumber, inputFormat), resolvedAs: docNumber };
   } catch (e) {
@@ -70,6 +78,7 @@ export async function fetchWithFamilyFallback(
   inputFormat: string,
   fetcher: (docNum: string, fmt: string) => Promise<string>
 ): Promise<{ raw: string; resolvedDocument: string; substituted: boolean }> {
+  ({ number: docNumber, format: inputFormat } = normaliseDocNumber(docNumber, inputFormat));
   try {
     const raw = await fetcher(docNumber, inputFormat);
     return { raw, resolvedDocument: docNumber, substituted: false };

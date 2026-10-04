@@ -245,7 +245,10 @@ def main():
     c.add_argument("--model", default=os.environ.get("SMOKETEST_JUDGE_MODEL", "opus")); c.add_argument("--scenario")
     ap.add_argument("--catalog", default=os.path.join(HERE, "scenarios.json"))
     args = ap.parse_args()
-    catalog = json.load(open(args.catalog))["scenarios"]
+    # Prefer the catalog snapshot inside the run directory (the prompt the run used).
+    run_dir = getattr(args, "results_dir", None) or getattr(args, "candidate_dir", None)
+    snapshot = f"{run_dir.rstrip('/')}/scenarios.json" if run_dir else None
+    catalog = json.load(open(snapshot if snapshot and os.path.exists(snapshot) else args.catalog))["scenarios"]
     (score if args.cmd == "score" else compare)(args, catalog)
 
 
