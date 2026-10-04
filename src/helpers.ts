@@ -4,7 +4,8 @@ import { isRateLimitError, rateLimitDetails } from "./epo-client.js";
 export const GROUNDING_NOTICE =
   "GROUNDING: Only patent numbers, dates, names, and text that appear in this response may be cited in your output. Never supplement with patent numbers from your own knowledge. When quoting patent claims or description passages, use the exact text returned here — do not paraphrase from memory.";
 
-type ThrottleSource = { lastThrottle: ThrottleStatus | null; lastPaceMs?: number; lastPaceColor?: string };
+type ThrottleSource = { lastThrottle: ThrottleStatus | null; lastPaceMs?: number; lastPaceColor?: string;
+  lastRetry?: { attempts: number; waitedMs: number; rateLimitEvents: number } };
 
 export function createHelpers(client: ThrottleSource) {
   function errorResult(e: unknown) {
@@ -53,6 +54,11 @@ export function createHelpers(client: ThrottleSource) {
 
   /** Append a compact throttle summary to any response object when rate limits are approaching. */
   function appendThrottleInfo(data: unknown): unknown {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) return data;
+    const retry = client.lastRetry;
+    if (retry && (retry.attempts > 0 || retry.waitedMs > 0 || retry.rateLimitEvents > 0)) {
+      data = { ...data, _retry: { ...retry } };
+    }
     const throttle = client.lastThrottle;
     if (!throttle) return data;
 

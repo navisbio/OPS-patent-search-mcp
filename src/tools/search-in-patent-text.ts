@@ -50,6 +50,7 @@ Full text is available primarily for EP, WO, and US patents.`,
         .describe("Case-sensitive matching (default false)"),
       section_filter: z
         .array(z.enum(["claims", "description"]))
+        .min(1)
         .optional()
         .describe('Restrict search to specific sections, e.g. ["claims"]. Omit to search both.'),
       fallback_to_family: fallbackToFamilyParam,
@@ -73,60 +74,34 @@ Full text is available primarily for EP, WO, and US patents.`,
       let resolvedDescDoc = document_number;
       let substituted = false;
 
-      // Fetch both claims and description — falling back to family if needed
+      // Fetch only requested sections so excluded sections cannot invalidate results.
       let claimsRaw: string | null = null;
       let descRaw: string | null = null;
       let rateLimitError: OpsApiError | undefined;
 
-      if (fallback_to_family) {
-        // Try claims with fallback
+      const sections = section_filter ?? ["claims", "description"];
+      for (const section of ["claims", "description"] as const) {
+        if (!sections.includes(section) || rateLimitError) continue;
+        // Prefer the resolved claims document when retrieving description.
+        const doc: string = section === "description" && substituted ? resolvedClaimsDoc : document_number;
+        const format: string = section === "description" && substituted ? "docdb" : input_format;
+        const fetchSection = (d: string, f: string) => section === "claims"
+          ? client.getClaims(d, f) : client.getDescription(d, f);
         try {
-          const result = await fetchWithFamilyFallback(client,
-            document_number,
-            input_format,
-            (d, f) => client.getClaims(d, f)
-          );
-          claimsRaw = result.raw;
-          if (result.substituted) {
+          const result = fallback_to_family
+            ? await fetchWithFamilyFallback(client, doc, format, fetchSection)
+            : { raw: await fetchSection(doc, format), resolvedDocument: doc, substituted: false };
+          if (section === "claims") {
+            claimsRaw = result.raw;
             resolvedClaimsDoc = result.resolvedDocument;
-            substituted = true;
-          }
-        } catch (e) {
-          if (isRateLimitError(e)) rateLimitError = e;
-          // claims unavailable
-        }
-
-        // Try description — prefer the same resolved document if claims already substituted
-        const descDoc = substituted ? resolvedClaimsDoc : document_number;
-        const descFmt = substituted ? "docdb" : input_format;
-        try {
-          if (rateLimitError) throw rateLimitError;
-          const result = await fetchWithFamilyFallback(client,
-            descDoc,
-            descFmt,
-            (d, f) => client.getDescription(d, f)
-          );
-          descRaw = result.raw;
-          if (result.substituted) {
+          } else {
+            descRaw = result.raw;
             resolvedDescDoc = result.resolvedDocument;
-            substituted = true;
           }
+          substituted ||= result.substituted;
         } catch (e) {
           if (isRateLimitError(e)) rateLimitError = e;
-          // description unavailable
-        }
-      } else {
-        try {
-          claimsRaw = await client.getClaims(document_number, input_format);
-        } catch (e) {
-          if (isRateLimitError(e)) rateLimitError = e;
-        }
-        if (!rateLimitError) {
-          try {
-            descRaw = await client.getDescription(document_number, input_format);
-          } catch (e) {
-            if (isRateLimitError(e)) rateLimitError = e;
-          }
+          // Unavailable text may still leave the other requested section searchable.
         }
       }
 
@@ -196,8 +171,11 @@ Full text is available primarily for EP, WO, and US patents.`,
       };
 
       if (substituted) {
-        result.note = `Full text not available for ${document_number}. Search performed against family member(s): claims from ${resolvedClaimsDoc}, description from ${resolvedDescDoc}.`;
-        result.resolvedDocuments = { claims: resolvedClaimsDoc, description: resolvedDescDoc };
+        result.resolvedDocuments = {
+          ...(claimsRaw && { claims: resolvedClaimsDoc }),
+          ...(descRaw && { description: resolvedDescDoc }),
+        };
+        result.note = `Full text not available for ${document_number}. Search performed against family member(s): ${Object.entries(result.resolvedDocuments as Record<string, string>).map(([section, doc]) => `${section} from ${doc}`).join(", ")}.`;
       }
 
       const response = jsonResult(result, { grounding: true });

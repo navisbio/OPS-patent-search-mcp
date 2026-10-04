@@ -84,6 +84,26 @@ When installed as a Claude Code plugin, guided workflow skills become available.
 
 ## Development
 
+### Rate limits
+
+The server retries rate-limited OPS requests (HTTP 403/429) with backoff, honoring
+`Retry-After` in seconds or as an HTTP date. Each request gets at most two retries,
+within the tool time budget (55 seconds by default; `OPS_TOOL_TIMEOUT_MS` overrides
+it). The server remembers the cooldown across tool calls. If the wait cannot fit
+in the next call's budget, it returns a rate-limit error without sending another
+OPS request.
+
+Agents receive `error: "rate_limited"`, `retryable: true`, `retryAfterSeconds`, and
+`retryAttempts` on rate-limit errors. Interrupted multi-step searches preserve
+retrieved results and return `partial: true`, `rateLimit`, and `isError: true`.
+Unchecked sections and documents are unknown; zero matches in partial results do
+not establish absence. Wait for the reported delay before retrying, preserve
+partial results, and avoid parallel calls. Successful calls that waited or retried
+include `_retry` activity; `_throttle` reports OPS quota headers when available.
+Text searches with `section_filter` retrieve only the requested sections.
+
+### Commands
+
 ```bash
 npm install
 npm run build              # Compile TypeScript → dist/

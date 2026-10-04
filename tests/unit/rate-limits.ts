@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { setImmediate as flushAsync } from 'node:timers/promises';
 import { EpoClient, OpsApiError, isRateLimitError } from '../../src/epo-client.js';
 import { fetchWithFamilyFallback } from '../../src/fallback.js';
 import { registerSearchAndFilterFulltext } from '../../src/tools/search-and-filter.js';
@@ -43,6 +44,151 @@ const filterArgs = { query: 'ta="target"', filter_terms: ['target'], match_mode:
 const textArgs = { document_number: 'EP1000001', input_format: 'epodoc', search_terms: ['target'],
   context_chars: 150, limit: 30, case_sensitive: false, fallback_to_family: false };
 const data = (r: any) => JSON.parse(r.content[0].text);
+
+for (const fallback of [false, true]) {
+  for (const status of [403, 429]) {
+    for (const section of ['claims', 'description']) {
+      test(`${section}-only text search skips excluded HTTP ${status} with fallback=${fallback}`, async () => {
+        let excludedRequests = 0;
+        const description = JSON.stringify({ 'ops:world-patent-data': {
+          'ftxt:fulltext-documents': { 'ftxt:fulltext-document': {
+            description: { p: { $: 'A target inhibitor.' } },
+          } },
+        } });
+        const excluded = async () => { excludedRequests++; throw limited(status); };
+        const r = await invoke(registerSearchInPatentText, client({
+          getClaims: section === 'claims' ? async () => claims : excluded,
+          getDescription: section === 'description' ? async () => description : excluded,
+        }), { ...textArgs, section_filter: [section], fallback_to_family: fallback });
+        assert.equal(excludedRequests, 0);
+        assert.equal(r.isError, undefined);
+        assert.equal(data(r).partial, undefined);
+        assert.equal(data(r).rateLimit, undefined);
+        assert.equal(data(r).totalMatchCount, 1);
+        assert.equal(data(r).matches[0].sectionOffset, 0);
+      });
+    }
+  }
+}
+
+function authenticatedClient() {
+  const c = new EpoClient('test', 'test');
+  (c as any).token = { accessToken: 'test', expiresAt: Date.now() + 3600000 };
+  return c;
+}
+
+for (const section of ['claims', 'description']) {
+  test(`${section}-only family fallback reports only the retrieved section`, async () => {
+    let requests = 0;
+    const fetchRequested = async () => {
+      if (++requests === 1) return unavailable();
+      return section === 'claims' ? claims : JSON.stringify({ 'ops:world-patent-data': {
+        'ftxt:fulltext-documents': { 'ftxt:fulltext-document': { description: { p: { $: 'A target inhibitor.' } } } },
+      } });
+    };
+    let excludedRequests = 0;
+    const excluded = async () => { excludedRequests++; throw limited(); };
+    const r = await invoke(registerSearchInPatentText, client({
+      getClaims: section === 'claims' ? fetchRequested : excluded,
+      getDescription: section === 'description' ? fetchRequested : excluded,
+    }), { ...textArgs, section_filter: [section], fallback_to_family: true });
+    assert.equal(r.isError, undefined);
+    assert.equal(excludedRequests, 0);
+    assert.equal(requests, 2);
+    assert.deepEqual(data(r).resolvedDocuments, { [section]: 'EP.1000001.A1' });
+    assert.equal(data(r).totalMatchCount, 1);
+  });
+}
+
+test('rate-limit retry waits and reports recovery to the agent', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+  const c = authenticatedClient();
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => ++requests === 1
+    ? new Response('limited', { status: 429, headers: { 'Retry-After': '7' } })
+    : new Response(claims));
+  const response = invoke(registerSearchInPatentText, c, { ...textArgs, section_filter: ['claims'] });
+  await flushAsync();
+  t.mock.timers.tick(6999);
+  await flushAsync();
+  assert.equal(requests, 1);
+  t.mock.timers.tick(1);
+  const r = await response;
+  assert.equal(r.isError, undefined);
+  assert.equal(data(r).totalMatchCount, 1);
+  assert.deepEqual(data(r)._retry, { attempts: 1, waitedMs: 7000, rateLimitEvents: 1 });
+  c.startToolCall();
+  assert.deepEqual(c.lastRetry, { attempts: 0, waitedMs: 0, rateLimitEvents: 0 });
+  await c.getClaims('EP1000001');
+  assert.equal(requests, 3, 'successful recovery clears cooldown');
+});
+
+for (const status of [403, 429, 503]) {
+  test(`HTTP ${status} stops after two retries even with an unlimited deadline`, async t => {
+    t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+    const c = authenticatedClient();
+    let requests = 0;
+    t.mock.method(globalThis, 'fetch', async () => { requests++; return new Response('unavailable', { status }); });
+    const rejected = assert.rejects(c.getClaims('EP1000001'), (e: unknown) => {
+      assert.ok(e instanceof OpsApiError);
+      assert.equal(e.status, status);
+      if (status !== 503) {
+        assert.equal(e.retryAttempts, 2);
+        assert.equal(e.retryAfterSeconds, 16);
+      }
+      return true;
+    });
+    await flushAsync();
+    t.mock.timers.tick(status === 503 ? 4000 : 5000);
+    await flushAsync();
+    t.mock.timers.tick(8000);
+    await rejected;
+    assert.equal(requests, 3);
+    assert.equal(c.lastRetry.attempts, 2);
+  });
+}
+
+test('cooldown survives tool calls and prevents requests until Retry-After expires', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+  const c = authenticatedClient();
+  c.deadline = Date.now() + 4000;
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => ++requests === 1
+    ? new Response('limited', { status: 429, headers: { 'Retry-After': '90' } })
+    : new Response(claims));
+  await assert.rejects(c.getClaims('EP1000001'), isRateLimitError);
+  t.mock.timers.tick(10000);
+  const r = await invoke(registerSearchInPatentText, c, { ...textArgs, section_filter: ['claims'] });
+  assert.equal(r.isError, true);
+  assert.equal(data(r).retryable, true);
+  assert.equal(data(r).retryAfterSeconds, 80);
+  assert.equal(data(r).retryAttempts, 0);
+  assert.match(data(r).hint, /Wait 80 seconds/);
+  assert.equal(requests, 1);
+  t.mock.timers.tick(80000);
+  c.startToolCall();
+  await c.getClaims('EP1000001');
+  assert.equal(requests, 2);
+});
+
+test('a cooldown that fits the next tool budget is waited out automatically', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+  const c = authenticatedClient();
+  c.deadline = Date.now() + 4000;
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => ++requests === 1
+    ? new Response('limited', { status: 403, headers: { 'Retry-After': '20' } })
+    : new Response(claims));
+  await assert.rejects(c.getClaims('EP1000001'), isRateLimitError);
+  const response = invoke(registerSearchInPatentText, c, { ...textArgs, section_filter: ['claims'] });
+  await flushAsync();
+  assert.equal(requests, 1);
+  t.mock.timers.tick(20000);
+  const r = await response;
+  assert.equal(r.isError, undefined);
+  assert.deepEqual(data(r)._retry, { attempts: 0, waitedMs: 20000, rateLimitEvents: 0 });
+  assert.equal(requests, 2);
+});
 
 for (const status of [403, 429]) {
   test(`HTTP ${status} preserves status and Retry-After when retry budget is exhausted`, async () => {

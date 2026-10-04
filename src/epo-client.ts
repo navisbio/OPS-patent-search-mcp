@@ -17,6 +17,8 @@ const TOOL_TIMEOUT_MS = parseInt(process.env.OPS_TOOL_TIMEOUT_MS ?? "55000", 10)
 const REQUEST_TIMEOUT_MS = 15_000;
 /** Base delay for exponential backoff on retries. */
 const BACKOFF_BASE_MS = 2_000;
+/** At most three HTTP attempts per request, even with an extended tool budget. */
+const MAX_RETRIES = 2;
 
 interface TokenInfo {
   accessToken: string;
@@ -61,7 +63,8 @@ export class OpsApiError extends Error {
   public readonly status: number;
   public readonly code: string;
 
-  constructor(status: number, message: string, code: string = "", public readonly retryAfterSeconds?: number) {
+  constructor(status: number, message: string, code: string = "", public readonly retryAfterSeconds?: number,
+    public readonly retryAttempts?: number) {
     super(message);
     this.name = "OpsApiError";
     this.status = status;
@@ -83,8 +86,10 @@ export function rateLimitDetails(e: OpsApiError) {
     httpStatus: e.status,
     code: e.code,
     message: e.message,
-    ...(e.retryAfterSeconds !== undefined && { retryAfterSeconds: e.retryAfterSeconds }),
-    hint: "Retrieval was interrupted by EPO OPS rate limiting. Unchecked text is unknown; do not interpret it as absent. Wait before retrying.",
+    retryable: true,
+    retryAfterSeconds: e.retryAfterSeconds ?? 60,
+    retryAttempts: e.retryAttempts ?? 0,
+    hint: `Retrieval was interrupted by EPO OPS rate limiting. Unchecked text is unknown; do not interpret it as absent. Wait ${e.retryAfterSeconds ?? 60} seconds before retrying; avoid parallel requests and preserve any partial results.`,
   };
 }
 
@@ -137,6 +142,11 @@ export class EpoClient {
   public deadline: number = Infinity;
   /** Whether the last request failure was due to rate limiting (403/429). */
   public wasRateLimited: boolean = false;
+  /** Retry activity for the current tool call, also exposed after successful recovery. */
+  public lastRetry = { attempts: 0, waitedMs: 0, rateLimitEvents: 0 };
+  /** OPS cooldown persists across tool calls; startToolCall must not erase it. */
+  private cooldownUntil = 0;
+  private cooldownError: OpsApiError | undefined;
 
   constructor(consumerKey: string, consumerSecret: string) {
     this.consumerKey = consumerKey;
@@ -147,6 +157,9 @@ export class EpoClient {
   startToolCall(): void {
     this.deadline = Date.now() + TOOL_TIMEOUT_MS;
     this.wasRateLimited = false;
+    this.lastPaceMs = 0;
+    this.lastPaceColor = "";
+    this.lastRetry = { attempts: 0, waitedMs: 0, rateLimitEvents: 0 };
   }
 
   /** Milliseconds remaining before the deadline. */
@@ -192,6 +205,17 @@ export class EpoClient {
     path: string,
     options: { rangeStart?: number; rangeEnd?: number } = {}
   ): Promise<string> {
+    const cooldownMs = this.cooldownUntil - Date.now();
+    if (cooldownMs > 0 && this.cooldownError) {
+      this.wasRateLimited = true;
+      if (this.timeRemaining <= cooldownMs + 3_000) {
+        throw new OpsApiError(this.cooldownError.status,
+          "EPO OPS is still cooling down after rate limiting. No new request was sent.",
+          "RATE_LIMIT", Math.ceil(cooldownMs / 1000), 0);
+      }
+      await new Promise((r) => setTimeout(r, cooldownMs));
+      this.lastRetry.waitedMs += cooldownMs;
+    }
     const token = await this.authenticate();
     const baseHeaders: Record<string, string> = {
       Authorization: `Bearer ${token}`,
@@ -203,6 +227,7 @@ export class EpoClient {
 
     const url = `${BASE_URL}${path}`;
     let attempt = 0;
+    let retries = 0;
     let lastStatus = 0;
     let lastRateLimitError: OpsApiError | undefined;
 
@@ -246,12 +271,15 @@ export class EpoClient {
           attempt++;
           // Check if we have time for another attempt + backoff
           const delay = BACKOFF_BASE_MS * 2 ** Math.min(attempt, 4);
-          if (this.deadline - Date.now() > delay + 3_000) {
+          if (retries < MAX_RETRIES && this.deadline - Date.now() > delay + 3_000) {
+            retries++;
+            this.lastRetry.attempts++;
             await new Promise((r) => setTimeout(r, delay));
+            this.lastRetry.waitedMs += delay;
             continue;
           }
-          // No time left — fall through to deadline check at top of loop
-          continue;
+          if (lastRateLimitError) throw lastRateLimitError;
+          throw new OpsApiError(408, "EPO OPS request timed out; retry budget exhausted.", "TOOL_TIMEOUT");
         }
         throw e;
       } finally {
@@ -264,6 +292,8 @@ export class EpoClient {
       );
 
       if (resp.ok) {
+        this.cooldownUntil = 0;
+        this.cooldownError = undefined;
         return resp.text();
       }
 
@@ -275,25 +305,31 @@ export class EpoClient {
       if (isRetryable) {
         attempt++;
         const retryAfter = resp.headers.get("Retry-After");
-        let delay: number;
+        let delay = BACKOFF_BASE_MS * 2 ** Math.min(attempt, 4);
         if (retryAfter) {
           const seconds = Number(retryAfter);
           const date = Date.parse(retryAfter);
-          delay = Number.isFinite(seconds) ? Math.max(0, seconds * 1000)
-            : Number.isFinite(date) ? Math.max(0, date - Date.now()) : 1000;
-        } else {
-          delay = BACKOFF_BASE_MS * 2 ** Math.min(attempt, 4);
+          if (Number.isFinite(seconds)) delay = Math.max(0, seconds * 1000);
+          else if (Number.isFinite(date)) delay = Math.max(0, date - Date.now());
         }
         if (isRateLimit) delay = Math.max(delay, 5_000);
         if (isRateLimit) {
+          this.lastRetry.rateLimitEvents++;
           lastRateLimitError = new OpsApiError(resp.status,
-            "Rate limited by EPO OPS. Retrieval could not finish within the tool time budget. Wait before retrying.",
-            "RATE_LIMIT", Math.ceil(delay / 1000));
+            "Rate limited by EPO OPS. Automatic retries stopped at the retry or tool time limit. Wait before retrying.",
+            "RATE_LIMIT", Math.ceil(delay / 1000), retries);
+          this.cooldownUntil = Date.now() + delay;
+          this.cooldownError = lastRateLimitError;
         }
+        // Consume the error body before waiting so the connection can be reused.
+        await resp.text();
 
         // Only retry if we have enough time left
-        if (this.deadline - Date.now() > delay + 3_000) {
+        if (retries < MAX_RETRIES && this.deadline - Date.now() > delay + 3_000) {
+          retries++;
+          this.lastRetry.attempts++;
           await new Promise((r) => setTimeout(r, delay));
+          this.lastRetry.waitedMs += delay;
           continue;
         }
         // Preserve the failing HTTP status instead of spinning until a generic timeout.
