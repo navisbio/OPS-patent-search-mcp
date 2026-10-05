@@ -71,6 +71,27 @@ for (const fallback of [false, true]) {
   }
 }
 
+for (const status of [403, 429]) {
+  test(`HTTP ${status} remains a rate limit when reading its error body fails`, async t => {
+    const c = authenticatedClient();
+    c.deadline = Date.now() + 4000;
+    let requests = 0;
+    t.mock.method(globalThis, 'fetch', async () => {
+      requests++;
+      const response = new Response('limited', { status, headers: { 'Retry-After': '60' } });
+      response.text = async () => { throw new TypeError('Connection closed while reading error body'); };
+      return response;
+    });
+    await assert.rejects(c.getClaims('EP1000001'), (e: unknown) => {
+      assert.ok(isRateLimitError(e));
+      assert.equal(e.status, status);
+      assert.equal(e.retryAfterSeconds, 60);
+      return true;
+    });
+    assert.equal(requests, 1);
+  });
+}
+
 function authenticatedClient() {
   const c = new EpoClient('test', 'test');
   (c as any).token = { accessToken: 'test', expiresAt: Date.now() + 3600000 };

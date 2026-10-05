@@ -321,8 +321,9 @@ export class EpoClient {
           this.cooldownUntil = Date.now() + delay;
           this.cooldownError = lastRateLimitError;
         }
-        // Consume the error body before waiting so the connection can be reused.
-        await resp.text();
+        // Drain best-effort for connection reuse. A disconnected error body must
+        // not replace the HTTP status already received (especially 403/429).
+        await resp.text().catch(() => undefined);
 
         // Only retry if we have enough time left
         if (retries < MAX_RETRIES && this.deadline - Date.now() > delay + 3_000) {
