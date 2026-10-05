@@ -1,3 +1,6 @@
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { setImmediate as flushAsync } from 'node:timers/promises';
@@ -198,16 +201,16 @@ test('a cooldown that fits the next tool budget is waited out automatically', as
   c.deadline = Date.now() + 4000;
   let requests = 0;
   t.mock.method(globalThis, 'fetch', async () => ++requests === 1
-    ? new Response('limited', { status: 403, headers: { 'Retry-After': '20' } })
+    ? new Response('limited', { status: 403, headers: { 'Retry-After': '10' } })
     : new Response(claims));
   await assert.rejects(c.getClaims('EP1000001'), isRateLimitError);
   const response = invoke(registerSearchInPatentText, c, { ...textArgs, section_filter: ['claims'] });
   await flushAsync();
   assert.equal(requests, 1);
-  t.mock.timers.tick(20000);
+  t.mock.timers.tick(10000);
   const r = await response;
   assert.equal(r.isError, undefined);
-  assert.deepEqual(data(r)._retry, { attempts: 0, waitedMs: 20000, rateLimitEvents: 0 });
+  assert.deepEqual(data(r)._retry, { attempts: 0, waitedMs: 10000, rateLimitEvents: 0 });
   assert.equal(requests, 2);
 });
 
@@ -281,7 +284,8 @@ test('fulltext filter captures rate limiting in description retrieval', async ()
   const r = await invoke(registerSearchAndFilterFulltext, client({ getClaims: async () => claims,
     getDescription: async () => { throw limited(); } }), { ...filterArgs, section_filter: undefined });
   const d = data(r); assert.equal(r.isError, true); assert.equal(d.rateLimit.httpStatus, 429);
-  assert.equal(d.checked, 0); assert.deepEqual(d.skipped, []);
+  assert.equal(d.checked, 1); assert.equal(d.matchedCount, 1);
+  assert.equal(d.matched[0].partial, true); assert.deepEqual(d.skipped, []);
 });
 test('genuine missing text remains a missing-text outcome', async () => {
   const r = await invoke(registerSearchAndFilterFulltext, client(), filterArgs);
@@ -375,7 +379,7 @@ test('rate-limit interruption takes precedence over non-English zero-match guida
     getDescription: async () => { throw limited(); } }), textArgs);
   const d = data(r);
   assert.equal(r.isError, true); assert.equal(d.partial, true); assert.equal(d.textLanguage.claims, 'ja');
-  assert.equal(d.matchCount, 0); assert.match(d.hint, /rate limiting interrupted/);
+  assert.equal(d.matchCount, 0); assert.match(d.hint, /request limits interrupted/);
 });
 test('single-page summary includes partial sample warning and valid JSON steering', async () => {
   const r = await invoke(registerSearchPatents, client({ search: async () => search(200) }), {
@@ -398,4 +402,202 @@ test('partial pagination keeps both pacing metadata and structured rate-limit ev
   assert.equal(r.isError, true); assert.equal(d.rateLimit.httpStatus, 429);
   assert.match(d._throttle.pacing, /waited 3s/); assert.match(d.note, /WARNING/);
   assert.equal(d.results.length, 3);
+});
+
+// Exercise load handling with a real EpoClient and simulated OPS headers.
+const overloaded = 'overloaded (retrieval=green:50, search=green:5, inpadoc=green:30)';
+const idle = 'idle (retrieval=green:200, search=green:30, inpadoc=green:60)';
+
+test('overloaded green search paces across tool calls and retains the worst limit for 60s', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+  const c = authenticatedClient();
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => new Response(search(), {
+    headers: { 'X-Throttling-Control': ++requests === 1 ? overloaded : idle },
+  }));
+  c.startToolCall();
+  await c.search('ta="target"');
+  c.startToolCall();
+  const second = c.search('ta="target"');
+  await flushAsync();
+  t.mock.timers.tick(11999); await flushAsync();
+  assert.equal(requests, 1);
+  t.mock.timers.tick(1); await second;
+  assert.equal(requests, 2); assert.equal(c.lastPaceMs, 12000);
+  assert.equal(c.lastThrottle?.overallStatus, 'idle');
+  assert.equal(c.effectiveThrottle?.overallStatus, 'overloaded');
+  assert.equal(c.effectiveThrottle?.services.search.requestLimit, 5);
+  t.mock.timers.tick(48001);
+  assert.equal(c.effectiveThrottle?.overallStatus, 'idle');
+  assert.equal(c.effectiveThrottle?.services.search.requestLimit, 30);
+});
+
+test('pacing defers immediately when the wait cannot fit a full request in the budget', async t => {
+  const c = authenticatedClient();
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => { requests++; return new Response(search(), {
+    headers: { 'X-Throttling-Control': overloaded },
+  }); });
+  await c.search('ta="target"');
+  c.deadline = Date.now() + 20000;
+  await assert.rejects(c.search('ta="target"'), (e: unknown) => {
+    assert.ok(e instanceof OpsApiError); assert.equal(e.code, 'OPS_DEFERRED');
+    assert.equal(e.status, 0); assert.equal(isRateLimitError(e), false);
+    assert.equal(e.retryAfterSeconds, 12); return true;
+  });
+  assert.equal(requests, 1, 'no unpaced second request');
+});
+
+for (const [method, service] of [['getClaims', 'retrieval'], ['getFamily', 'inpadoc'], ['getLegalStatus', 'inpadoc']] as const) {
+  test(`${method} respects the service limit and hands waits over 15s to the agent`, async t => {
+    const c = authenticatedClient(); let requests = 0;
+    t.mock.method(globalThis, 'fetch', async () => { requests++; return new Response(claims, {
+      headers: { 'X-Throttling-Control': `overloaded (${service}=green:2)` },
+    }); });
+    await c[method]('EP1000001');
+    await assert.rejects(c[method]('EP1000001'), (e: unknown) => {
+      assert.ok(e instanceof OpsApiError); assert.equal(e.code, 'OPS_DEFERRED');
+      assert.equal(e.retryAfterSeconds, 30); return true;
+    });
+    assert.equal(requests, 1);
+  });
+}
+
+test('black service defers, then expires without extending its window on each call', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+  const c = authenticatedClient(); let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => { requests++; return new Response(claims, {
+    headers: { 'X-Throttling-Control': requests === 1 ? 'overloaded (retrieval=black:0)' : idle },
+  }); });
+  await c.getClaims('EP1000001');
+  await assert.rejects(c.getClaims('EP1000001'), (e: any) => e.code === 'OPS_DEFERRED' && e.retryAfterSeconds === 60);
+  t.mock.timers.tick(60000); await c.getClaims('EP1000001');
+  assert.equal(requests, 2);
+});
+
+test('overload preserves successful counts and qualifies zero without alleging a rate-limit error', async () => {
+  const throttle = { overallStatus: 'overloaded', isThrottled: false,
+    services: { search: { color: 'green', requestLimit: 5 } }, raw: overloaded };
+  for (const count of [0, 641]) {
+    const r = await invoke(registerSearchPatents, client({ lastThrottle: throttle,
+      search: async () => search(count) }), { query: 'ta="target"', count_only: true });
+    const d = data(r);
+    assert.equal(r.isError, undefined); assert.equal(d.totalCount, count);
+    assert.equal(d._throttle.isOverloaded, true); assert.equal(d._throttle.isThrottled, false);
+    assert.equal(d._throttle.quota.search.requestLimit, 5);
+    assert.equal(d._throttle.quota.search.remaining, undefined);
+    assert.equal(d.verificationRecommended, count === 0 ? true : undefined);
+    assert.equal(d.rateLimit, undefined);
+  }
+});
+
+test('preventive deferral preserves filter matches and remaining documents', async () => {
+  let requests = 0;
+  const r = await invoke(registerSearchAndFilterFulltext, client({ getClaims: async () => {
+    if (++requests === 2) throw new OpsApiError(0, 'Deferred', 'OPS_DEFERRED', 30);
+    return claims;
+  } }), filterArgs);
+  const d = data(r);
+  assert.equal(r.isError, true); assert.equal(d.partial, true);
+  assert.equal(d.checked, 1); assert.equal(d.matchedCount, 1);
+  assert.equal(d.deferred.error, 'ops_deferred'); assert.equal(d.deferred.requestSent, false);
+  assert.equal(d.rateLimit, undefined);
+  assert.deepEqual(d.remainingDocuments, ['EP1000002', 'EP1000003']);
+  assert.equal(requests, 2);
+});
+
+test('kind fallback propagates a pacing deferral instead of claiming unavailable full text', async () => {
+  let requests = 0;
+  await assert.rejects(fetchWithFamilyFallback(client(), 'EP1000001', 'epodoc', async () => {
+    if (++requests === 1) return unavailable();
+    throw new OpsApiError(0, 'Deferred', 'OPS_DEFERRED', 30);
+  }), (e: any) => e.code === 'OPS_DEFERRED');
+  assert.equal(requests, 2);
+});
+
+
+test('MCP protocol returns overload metadata and a structured deferral promptly', async t => {
+  const epo = authenticatedClient();
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => { requests++; return new Response(search(641), {
+    headers: { 'X-Throttling-Control': 'overloaded (search=green:2)' },
+  }); });
+  const server = new McpServer({ name: 'test-ops', version: '1.0.0' });
+  registerSearchPatents(server, epo);
+  const agent = new Client({ name: 'test-agent', version: '1.0.0' });
+  const [agentTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await server.connect(serverTransport); await agent.connect(agentTransport);
+  try {
+    const args = { name: 'search_patents', arguments: { query: 'ta="target"', count_only: true } };
+    const first = await agent.callTool(args);
+    assert.equal(data(first).totalCount, 641);
+    assert.equal(data(first)._throttle.isOverloaded, true);
+    assert.equal(first.isError, undefined);
+    const started = performance.now();
+    const second = await agent.callTool(args);
+    assert.ok(performance.now() - started < 1000, 'long wait is returned, not slept');
+    assert.equal(second.isError, true);
+    assert.equal(data(second).error, 'ops_deferred');
+    assert.equal(data(second).retryAfterSeconds, 30);
+    assert.equal(data(second).requestSent, false);
+    assert.equal(data(second).httpStatus, undefined);
+    assert.equal(requests, 1);
+  } finally { await agent.close(); await server.close(); }
+});
+
+test('filter preserves claims already checked when description retrieval is deferred', async () => {
+  const r = await invoke(registerSearchAndFilterFulltext, client({ getClaims: async () => claims,
+    getDescription: async () => { throw new OpsApiError(0, 'Deferred', 'OPS_DEFERRED', 30); },
+  }), { ...filterArgs, section_filter: ['claims', 'description'] });
+  const d = data(r);
+  assert.equal(d.checked, 1); assert.equal(d.matchedCount, 1);
+  assert.equal(d.matched[0].partial, true); assert.equal(d.deferred.error, 'ops_deferred');
+});
+
+test('a long HTTP rate-limit delay is handed to the agent even with a fresh 55s budget', async t => {
+  const c = authenticatedClient(); c.startToolCall(); let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => { requests++; return new Response('limited', {
+    status: 429, headers: { 'Retry-After': '30' },
+  }); });
+  await assert.rejects(c.getClaims('EP1000001'), (e: any) => isRateLimitError(e) && e.retryAfterSeconds === 30);
+  assert.equal(requests, 1);
+  c.startToolCall();
+  await assert.rejects(c.getClaims('EP1000001'), (e: any) => isRateLimitError(e) && e.retryAfterSeconds === 30);
+  assert.equal(requests, 1);
+});
+
+test('bibliography array keeps its shape and includes overload metadata as a separate content block', async () => {
+  const { createHelpers } = await import('../../src/helpers.js');
+  const r = createHelpers(client({ lastThrottle: { overallStatus: 'overloaded', isThrottled: false,
+    services: { retrieval: { color: 'green', requestLimit: 50 } }, raw: overloaded } })).jsonResult([{ title: 'Example' }]);
+  assert.ok(Array.isArray(data(r)));
+  assert.equal(JSON.parse(r.content[1].text)._throttle.isOverloaded, true);
+});
+
+test('preventive pagination deferral returns matches and a usable continuation', async () => {
+  let requests = 0;
+  const r = await invoke(registerSearchPatents, client({ search: async () => {
+    if (++requests === 3) throw new OpsApiError(0, 'Deferred', 'OPS_DEFERRED', 30);
+    return search(200);
+  } }), { query: 'ta="target"', range_start: 1, range_end: 25, count_only: false,
+    detail_level: 'compact', auto_paginate: true, max_results: 200 });
+  const d = data(r);
+  assert.equal(r.isError, true); assert.equal(d.partial, true);
+  assert.equal(d.results.length, 3); assert.equal(d.deferred.retryAfterSeconds, 30);
+  assert.equal(d.rateLimit, undefined);
+  assert.deepEqual(d.continuation, { query: 'ta="target"', range_start: 101, range_end: 200, auto_paginate: false });
+});
+
+test('HTTP timeout covers reading a successful response body', async t => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: Date.now() });
+  const c = authenticatedClient();
+  t.mock.method(globalThis, 'fetch', async (_url: unknown, options: RequestInit) => {
+    const response = new Response('pending');
+    response.text = () => new Promise((_resolve, reject) => {
+      options.signal!.addEventListener('abort', () => reject(new DOMException('Body read timed out', 'AbortError')));
+    });
+    return response;
+  });
+  const rejected = assert.rejects(c.getClaims('EP1000001'), (e: any) => e.name === 'AbortError');
+  await flushAsync(); t.mock.timers.tick(15000); await rejected;
 });

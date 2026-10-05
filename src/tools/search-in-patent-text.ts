@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { type EpoClient, type OpsApiError, isRateLimitError, rateLimitDetails } from "../epo-client.js";
+import { type EpoClient, type OpsApiError, isOpsInterruption, interruptionMetadata } from "../epo-client.js";
 import { parseFulltextParagraphs, searchKeywordsInParagraphs, detectFulltextLanguage } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { fetchWithFamilyFallback } from "../fallback.js";
@@ -100,7 +100,7 @@ Full text is available primarily for EP, WO, and US patents.`,
           }
           substituted ||= result.substituted;
         } catch (e) {
-          if (isRateLimitError(e)) rateLimitError = e;
+          if (isOpsInterruption(e)) rateLimitError = e;
           // Unavailable text may still leave the other requested section searchable.
         }
       }
@@ -148,7 +148,7 @@ Full text is available primarily for EP, WO, and US patents.`,
       const result: Record<string, unknown> = {
         documentNumber: document_number,
         searchTerms: search_terms,
-        ...(rateLimitError && { partial: true, rateLimit: rateLimitDetails(rateLimitError) }),
+        ...(rateLimitError && { partial: true, ...interruptionMetadata(rateLimitError) }),
         textLanguage,
         totalParagraphs: allParagraphs.length,
         claimsParagraphs: claimsCount,
@@ -162,7 +162,7 @@ Full text is available primarily for EP, WO, and US patents.`,
         matches: enrichedMatches,
         hint:
           rateLimitError
-            ? "EPO OPS rate limiting interrupted text retrieval. Matches cover only the retrieved text; unavailable sections are unknown, not absent. Wait before retrying."
+            ? "OPS request limits interrupted text retrieval. Matches cover only the retrieved text; unavailable sections are unknown, not absent. Wait before retrying."
             : enrichedMatches.length > 0
             ? `Found ${searchResult.totalMatchCount} total matches (showing ${enrichedMatches.length}). Use each match's 'sectionOffset' as the 'offset' parameter with get_patent_claims (if section=claims) or get_patent_description (if section=description) to read full text around that match.`
             : nonEnglish

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { EpoClient, OpsApiError, isRateLimitError } from "../epo-client.js";
+import { EpoClient, OpsApiError, isOpsInterruption } from "../epo-client.js";
 import { parseLegalEvents, type LegalEvent } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { normaliseDocNumber } from "../fallback.js";
@@ -66,7 +66,7 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
             resolvedAs = `${m[1]}.${m[2]}.${kind}`;
             break;
           } catch (inner) {
-            if (isRateLimitError(inner)) throw inner;
+            if (isOpsInterruption(inner)) throw inner;
             // next kind
           }
         }

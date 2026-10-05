@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { EpoClient, OpsApiError, isRateLimitError } from "../epo-client.js";
+import { EpoClient, OpsApiError, isOpsInterruption } from "../epo-client.js";
 import { parseBiblio, type PatentBiblio } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 
@@ -66,7 +66,7 @@ Batch mode: pass document_numbers (array of up to 100 numbers) to retrieve multi
       return m ? { number: `${m[1]}.${m[2]}.${m[3]}`, format: "docdb" } : { number: n.trim(), format: input_format };
     };
     const fetchOne = async (n: string, fmt: string): Promise<PatentBiblio[]> => {
-      try { return parseBiblio(await client.getBiblio(n, fmt)).filter((b) => !isStub(b)); } catch (e) { if (isRateLimitError(e)) throw e; return []; }
+      try { return parseBiblio(await client.getBiblio(n, fmt)).filter((b) => !isStub(b)); } catch (e) { if (isOpsInterruption(e)) throw e; return []; }
     };
     // Last resort for a number nothing else resolved: docdb with the common kind codes.
     const fetchByKinds = async (n: string): Promise<PatentBiblio[]> => {
@@ -93,7 +93,7 @@ Batch mode: pass document_numbers (array of up to 100 numbers) to retrieve multi
             try {
               allBiblio.push(...parseBiblio(await client.getBiblioMulti(chunk, fmt)).filter((b) => !isStub(b)));
             } catch (e) {
-              if (isRateLimitError(e)) throw e;
+              if (isOpsInterruption(e)) throw e;
               // recovered per number below
             }
           }
@@ -143,7 +143,7 @@ Batch mode: pass document_numbers (array of up to 100 numbers) to retrieve multi
               const raw = await client.getBiblio(`${cc}.${num}.${kind}`, "docdb");
               return jsonResult(parseBiblio(raw), { grounding: true });
             } catch (inner) {
-              if (isRateLimitError(inner)) return errorResult(inner);
+              if (isOpsInterruption(inner)) return errorResult(inner);
               // try next kind code
             }
           }

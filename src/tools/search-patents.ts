@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { EpoClient, OpsApiError, isRateLimitError, rateLimitDetails } from "../epo-client.js";
+import { EpoClient, OpsApiError, isOpsInterruption, interruptionMetadata } from "../epo-client.js";
 import { parseSearchResults, type SearchResultItem } from "../parsers.js";
 import { createHelpers, GROUNDING_NOTICE } from "../helpers.js";
 import { computeLandscapeStats, projectResults, buildDateCql } from "../search.js";
@@ -206,6 +206,7 @@ Example queries:
       const { totalCount: grandTotal } = parseSearchResults(peekRaw);
 
       let rateLimitError: OpsApiError | undefined;
+      let continuation: { query: string; range_start: number; range_end: number; auto_paginate: false } | undefined;
 
       /** Paginate a single CQL expression up to `budget` results, appending to `collector`.
        *  Returns { pageTotal, error? } — on API failure, returns partial results with the error. */
@@ -224,7 +225,10 @@ Example queries:
           try {
             raw = await client.search(pageCql, start, pageEnd);
           } catch (e) {
-            if (isRateLimitError(e)) rateLimitError = e;
+            if (isOpsInterruption(e)) {
+              rateLimitError = e;
+              continuation = { query: pageCql, range_start: start, range_end: pageEnd, auto_paginate: false };
+            }
             const msg = e instanceof Error ? e.message : String(e);
             return { pageTotal, error: `Pagination stopped at position ${start}: ${msg}` };
           }
@@ -314,7 +318,8 @@ Example queries:
       const response: Record<string, unknown> = {
         totalCount: grandTotal,
         fetchedCount: allResults.length,
-        ...(rateLimitError && { rateLimit: rateLimitDetails(rateLimitError) }),
+        ...(rateLimitError && { ...interruptionMetadata(rateLimitError), continuation,
+          continuationNote: "Resume search_patents with these continuation arguments and the same detail_level. For queries split by year, this covers the interrupted year only; subsequent years still require review." }),
         ...(fullDetailCapNote && { fullDetailCapNote }),
         ...(paginationErrors.length > 0 && {
           partial: true,
@@ -348,7 +353,7 @@ Example queries:
       };
     } catch (e) {
       if (e instanceof OpsApiError && e.status === 404) {
-        return jsonResult({ totalCount: 0, results: [] });
+        return jsonResult({ totalCount: 0, results: [], noResultsSource: "OPS HTTP 404", opsErrorCode: e.code });
       }
       return errorResult(e);
     }
