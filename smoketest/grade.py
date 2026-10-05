@@ -65,7 +65,7 @@ def result_json(text):
 def metrics(calls):
     m = collections.Counter()
     by_tool = collections.Counter()
-    overflow = throttled = 0
+    overflow = throttled = overloaded = deferred = rate_limits = 0
     not_found, partial_summaries = [], []
     for c in calls:
         by_tool[c["name"]] += 1
@@ -74,10 +74,23 @@ def metrics(calls):
         if "exceeds maximum allowed tokens" in c["result"][:400]:
             overflow += 1
         j = result_json(c["result"])
+        # Array payloads carry throttle metadata in a second JSON content block.
+        tail, payloads = c["result"].lstrip(), []
+        while tail:
+            try:
+                value, end = json.JSONDecoder().raw_decode(tail)
+            except ValueError:
+                break
+            payloads.append(value)
+            tail = tail[end:].lstrip()
+        objects = [value for value in payloads if isinstance(value, dict)]
+        th = next((value["_throttle"] for value in objects if value.get("_throttle")), {})
+        if th.get("isThrottled") or th.get("quota", {}).get("search", {}).get("status") == "red":
+            throttled += 1
+        overloaded += bool(th.get("isOverloaded") or th.get("overallStatus") == "overloaded")
+        deferred += any(value.get("error") == "ops_deferred" or value.get("deferred") for value in objects)
+        rate_limits += any(value.get("error") == "rate_limited" or value.get("rateLimit") for value in objects)
         if isinstance(j, dict):
-            th = j.get("_throttle") or {}
-            if th.get("isThrottled") or (th.get("quota", {}).get("search", {}).get("status") == "red"):
-                throttled += 1
             if isinstance(j.get("notFound"), list) and j["notFound"]:
                 not_found.extend(j["notFound"])
             if c["name"] == "search_patents" and c["input"].get("detail_level") == "summary":
@@ -88,6 +101,7 @@ def metrics(calls):
     return {
         "tool_calls": len(calls), "calls_by_tool": dict(by_tool), "tool_errors": m["errors"],
         "oversized_results": overflow, "throttled_responses": throttled,
+        "overloaded_responses": overloaded, "deferred_responses": deferred, "rate_limit_errors": rate_limits,
         "not_found_numbers": not_found, "partial_summary_calls": len(partial_summaries),
     }, partial_summaries
 
@@ -197,11 +211,14 @@ def main():
     summary = {
         "results_dir": os.path.basename(d), "scenarios": len(grades),
         "passed": sum(1 for g in grades if g["verdict"] == "pass"),
-        "cost_usd": round(sum(g["cost_usd"] or 0 for g in grades), 2),
+        "cost_usd": None if any(g["cost_usd"] is None for g in grades) else round(sum(g["cost_usd"] for g in grades), 2),
         "tool_calls": sum(g["metrics"]["tool_calls"] for g in grades),
         "tool_errors": sum(g["metrics"]["tool_errors"] for g in grades),
         "oversized_results": sum(g["metrics"]["oversized_results"] for g in grades),
         "throttled_responses": sum(g["metrics"]["throttled_responses"] for g in grades),
+        "overloaded_responses": sum(g["metrics"]["overloaded_responses"] for g in grades),
+        "deferred_responses": sum(g["metrics"]["deferred_responses"] for g in grades),
+        "rate_limit_errors": sum(g["metrics"]["rate_limit_errors"] for g in grades),
         "assertions_passed": sum(g["assertions_passed"] for g in grades),
         "assertions_total": sum(g["assertions_total"] for g in grades),
         "grounding_pass": sum((g["grounding"] or {}).get("pass", 0) for g in grades),
@@ -216,15 +233,17 @@ def main():
     print(f"{'scenario':22} {'suite':8} {'verdict':7} {'assert':7} {'calls':5} {'errs':4} {'big':3} {'thr':3} {'ground':9} {'cost':6}")
     for g in grades:
         gr = g["grounding"] or {}
+        cost_label = "n/a" if g["cost_usd"] is None else f"{g['cost_usd']:.2f}"
         print(f"{g['scenario']:22} {g['suite']:8} {g['verdict']:7} {g['assertions_passed']}/{g['assertions_total']:<5} "
               f"{g['metrics']['tool_calls']:5} {g['metrics']['tool_errors']:4} {g['metrics']['oversized_results']:3} "
-              f"{g['metrics']['throttled_responses']:3} {gr.get('pass', 0):4}/{gr.get('fail', 0):<4} {g['cost_usd'] or 0:6.2f}")
+              f"{g['metrics']['throttled_responses']:3} {gr.get('pass', 0):4}/{gr.get('fail', 0):<4} {cost_label:>6}")
         for a in g["assertions"]:
             if not a["pass"]:
                 print(f"    FAIL {a['type']}: {a['detail']}  ({a['why']})")
+    total_cost_label = "not reported" if summary["cost_usd"] is None else f"${summary['cost_usd']:.2f}"
     print(f"TOTAL: {summary['passed']}/{summary['scenarios']} scenarios pass, assertions {summary['assertions_passed']}/{summary['assertions_total']}, "
           f"errors {summary['tool_errors']}, oversized {summary['oversized_results']}, throttled {summary['throttled_responses']}, "
-          f"grounding {summary['grounding_pass']}/{summary['grounding_fail']}, cost ${summary['cost_usd']}")
+          f"grounding {summary['grounding_pass']}/{summary['grounding_fail']}, cost {total_cost_label}")
 
 
 if __name__ == "__main__":

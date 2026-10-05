@@ -84,9 +84,50 @@ When installed as a Claude Code plugin, guided workflow skills become available.
 
 ## Development
 
+### Rate limits
+
+The server retries rate-limited OPS requests (HTTP 403/429) with backoff, honoring
+`Retry-After` in seconds or as an HTTP date. Each request gets at most two retries,
+within the tool time budget (55 seconds by default; `OPS_TOOL_TIMEOUT_MS` overrides
+it). The server remembers the cooldown across tool calls. If the wait exceeds 15 seconds or cannot fit
+in the next call's budget while reserving time for a request, it returns a rate-limit error without sending another
+OPS request.
+
+Agents receive `error: "rate_limited"`, `retryable: true`, `retryAfterSeconds`, and
+`retryAttempts` on rate-limit errors. Interrupted multi-step searches preserve
+retrieved results and return `partial: true`, `rateLimit`, and `isError: true`.
+Unchecked sections and documents are unknown; zero matches in partial results do
+not establish absence. Wait for the reported delay before retrying, preserve
+partial results, and avoid parallel calls. Successful calls that waited or retried
+include `_retry` activity; `_throttle` reports OPS quota headers when available.
+OPS also reports service load and request limits in `X-Throttling-Control`.
+Following [EPO guidance, section 2.3.3](https://link.epo.org/web/searching-for-patents/data/en-ops-v3.2-documentation-version-1.3.20.pdf),
+the server retains the most restrictive observations for 60 seconds and paces
+search, retrieval, family, and legal requests. `_throttle.quota` reports
+`requestLimit` (requests per 60 seconds), not remaining quota. Overload is surfaced
+as a warning even when the service colour is green; successful results remain
+valid. Zero search results under overload include a suggestion to confirm later,
+a precaution rather than evidence that the result is incorrect.
+
+Preventive waits over 15 seconds, or waits that cannot fit the tool budget with
+room for the next request, return `error: "ops_deferred"`, `requestSent: false`,
+and `retryAfterSeconds`. This is a local deferral, not an HTTP 403/429 failure.
+Interrupted multi-step calls retain results and include `partial: true`, `deferred`,
+and `isError: true`. Search pagination supplies a `continuation` query and
+`range_start`, `range_end`, and `auto_paginate: false`; use these arguments to resume. For searches split
+by year, that continuation covers the interrupted year; subsequent years still
+need review. Full-text filters list `remainingDocuments` for individual text
+searches; rerunning the filter starts over. Array payloads retain their format
+and receive metadata in a separate MCP text content block.
+
+Text searches with `section_filter` retrieve only the requested sections.
+
+### Commands
+
 ```bash
 npm install
 npm run build              # Compile TypeScript → dist/
+npm run test:unit          # Offline regression tests (no credentials needed)
 npm test                   # Integration tests (requires PATENT_CONSUMER_KEY and PATENT_CONSUMER_SECRET_KEY in .env)
 ```
 

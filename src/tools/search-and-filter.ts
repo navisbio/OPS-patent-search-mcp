@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import type { EpoClient } from "../epo-client.js";
+import { type EpoClient, type OpsApiError, isOpsInterruption, interruptionMetadata } from "../epo-client.js";
 import { parseSearchResults, parseFulltextParagraphs, searchKeywordsInParagraphs } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { fetchWithFamilyFallback } from "../fallback.js";
@@ -126,7 +126,10 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
       // Reserve enough of the deadline to serialise and return what we have.
       const RESERVE_MS = 8_000;
       let scanned = 0;
+      let checked = 0;
       let truncated = false;
+      let rateLimitError: OpsApiError | undefined;
+      let interruptedDocument: string | undefined;
 
       for (const item of candidates) {
         if (client.timeRemaining < RESERVE_MS) {
@@ -152,7 +155,13 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
             } else {
               claimsRaw = await client.getClaims(doc, "epodoc");
             }
-          } catch {
+          } catch (e) {
+            if (isOpsInterruption(e)) {
+              rateLimitError = e;
+              interruptedDocument = doc;
+              truncated = true;
+              break;
+            }
             // no claims for this document
           }
         }
@@ -168,12 +177,19 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
             } else {
               descRaw = await client.getDescription(srcDoc, srcFmt);
             }
-          } catch {
+          } catch (e) {
+            if (isOpsInterruption(e)) {
+              rateLimitError = e;
+              interruptedDocument = doc;
+              truncated = true;
+              // Check any claims already retrieved before returning partial results.
+            }
             // no description for this document
           }
         }
 
         if (!claimsRaw && !descRaw) {
+          if (rateLimitError) break;
           skipped.push({
             publicationNumber: doc,
             title: item.title,
@@ -185,6 +201,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         const claimsParagraphs = claimsRaw ? parseFulltextParagraphs(claimsRaw) : [];
         const descParagraphs = descRaw ? parseFulltextParagraphs(descRaw) : [];
         const allParagraphs = [...claimsParagraphs, ...descParagraphs];
+        if (allParagraphs.length > 0) checked++;
         let idx = 0;
         for (const p of allParagraphs) p.index = idx++;
 
@@ -203,7 +220,10 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
             ? termsHit.length === filter_terms.length
             : termsHit.length > 0;
 
-        if (!keep) continue;
+        if (!keep) {
+          if (rateLimitError) break;
+          continue;
+        }
 
         const claimsCount = claimsParagraphs.length;
         const entry: Record<string, unknown> = {
@@ -223,18 +243,20 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         if (substitutedFrom) {
           entry.note = `Full text taken from family member ${substitutedFrom}.`;
         }
+        if (rateLimitError) entry.partial = true;
         matched.push(entry);
+        if (rateLimitError) break;
       }
 
       const notes: string[] = [];
       if (truncated) {
         notes.push(
-          `Stopped after ${scanned} of ${candidates.length} patents to stay inside the tool time budget. Re-run with a narrower query or a smaller max_patents_to_scan, or raise OPS_TOOL_TIMEOUT_MS.`
+          `Stopped after ${scanned} of ${candidates.length} patents to stay inside the tool time budget. Re-run with a narrower query or a smaller max_patents_to_scan. Follow any retryAfterSeconds before resuming.`
         );
       }
       if (totalCount > candidates.length) {
         notes.push(
-          `The CQL query matched ${totalCount} patents; ${candidates.length} were checked for full text. Patents beyond that were not examined.`
+          `The CQL query matched ${totalCount} publications; ${scanned} retrievals were attempted and ${checked} documents had text checked. Publications beyond those attempts were not examined.`
         );
       }
       if (deprioritised) {
@@ -248,12 +270,20 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         );
       }
 
-      return jsonResult(
+      const response = jsonResult(
         {
           query: cql,
           totalCount,
           scanned,
+          checked,
           truncated,
+          ...(rateLimitError && {
+            partial: true,
+            ...interruptionMetadata(rateLimitError),
+            interruptedDocument,
+            remainingDocuments: candidates.slice(scanned - 1).map(item => item.publicationNumber),
+            resumeHint: "Use search_in_patent_text on remainingDocuments with the same terms and sections. This tool has no scan-offset parameter; rerunning it starts over.",
+          }),
           matchMode: match_mode,
           sectionsChecked: section_filter ?? ["claims", "description"],
           filterTerms: filter_terms,
@@ -262,12 +292,15 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
           skipped,
           ...(notes.length > 0 ? { notes } : {}),
           hint:
-            matched.length > 0
+            rateLimitError
+              ? `OPS request limits interrupted retrieval for ${interruptedDocument}. Preserved ${matched.length} matches from retrieved text. The interrupted document and remaining candidates are unknown, not negative results. Wait before retrying.`
+              : matched.length > 0
               ? `${matched.length} of ${scanned} scanned patents contain the terms. Use a snippet's sectionOffset as the offset for get_patent_claims (section=claims) or get_patent_description (section=description) to read further.`
               : `None of the ${scanned} scanned patents contained ${match_mode === "all" ? "all of" : "any of"} the terms. Try match_mode="any", broader terms, or drop section_filter.`,
         },
         { grounding: true }
       );
+      return rateLimitError ? { ...response, isError: true } : response;
     } catch (e) {
       return errorResult(e);
     }
