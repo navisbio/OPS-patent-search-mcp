@@ -14,7 +14,7 @@ major filers.
 | File | Role |
 |---|---|
 | `scenarios.json` | The catalog: prompt, turn and cost caps, suite (`dev` or `holdout`), ground-truth assertions. |
-| `run.sh` | Runs the scenarios, then `grade.py`; optionally the judge and findings extraction. |
+| `run-claude.sh` | Runs the scenarios, then `grade.py`; optionally the judge and findings extraction. |
 | `grade.py` | Deterministic grader: metrics from the tool stream plus the catalog's assertions. Writes `<case>.grade.json` and `summary.json`. |
 | `judge.py` | Separate model scores each report from the task, the compact tool log and the report only. `score` for absolute rubric scores, `compare` for pairwise A/B between two runs. |
 | `findings.py` | Turns critiques and judge output into findings with stable keys, keeps `findings-index.json`, reports recurrence and regressions. |
@@ -51,11 +51,11 @@ The legacy Claude runner remains available:
 
 ```bash
 npm run build
-./smoketest/run.sh                                      # all scenarios, grade only
-SMOKETEST_MODEL=sonnet ./smoketest/run.sh               # choose the evaluator model
-SMOKETEST_SUITE=dev ./smoketest/run.sh                  # dev or holdout only
-SMOKETEST_JUDGE=1 SMOKETEST_FINDINGS=1 ./smoketest/run.sh
-SMOKETEST_BASELINE=smoketest/results/<previous run> SMOKETEST_JUDGE=1 ./smoketest/run.sh
+./smoketest/run-claude.sh                                      # all scenarios, grade only
+SMOKETEST_MODEL=sonnet ./smoketest/run-claude.sh               # choose the evaluator model
+SMOKETEST_SUITE=dev ./smoketest/run-claude.sh                  # dev or holdout only
+SMOKETEST_JUDGE=1 SMOKETEST_FINDINGS=1 ./smoketest/run-claude.sh
+SMOKETEST_BASELINE=smoketest/results/<previous run> SMOKETEST_JUDGE=1 ./smoketest/run-claude.sh
 
 python3 smoketest/grade.py smoketest/results/<run>                    # re-grade after editing assertions
 python3 smoketest/judge.py score smoketest/results/<run> [--scenario id]

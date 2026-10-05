@@ -138,9 +138,9 @@ npx tsx integration_tests/run-all.ts
 
 **Smoketest** (end-to-end eval harness via headless Claude Code):
 ```bash
-./smoketest/run.sh                          # all tests
-./smoketest/run.sh basic-search             # single test
-SMOKETEST_MODEL=sonnet ./smoketest/run.sh   # pick the evaluator model (default: CLI default)
+./smoketest/run-claude.sh                          # all tests
+./smoketest/run-claude.sh basic-search             # single test
+SMOKETEST_MODEL=sonnet ./smoketest/run-claude.sh   # pick the evaluator model (default: CLI default)
 ```
 
 Each smoketest runs a 3-message conversation: execute the task using the MCP tools, verify entities against the database (hallucination check), then collect structured feedback on what worked and what should be improved. Results land in `smoketest/results/<timestamp>[_model]/` as `.task.txt`, `.hallucination.txt`, and `.feedback.txt` per test. The evaluator runs from a scratch directory outside the repo so the repo's own `.mcp.json` is not loaded a second time as a project server.
