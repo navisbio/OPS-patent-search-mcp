@@ -74,13 +74,23 @@ def metrics(calls):
         if "exceeds maximum allowed tokens" in c["result"][:400]:
             overflow += 1
         j = result_json(c["result"])
+        # Array payloads carry throttle metadata in a second JSON content block.
+        tail, payloads = c["result"].lstrip(), []
+        while tail:
+            try:
+                value, end = json.JSONDecoder().raw_decode(tail)
+            except ValueError:
+                break
+            payloads.append(value)
+            tail = tail[end:].lstrip()
+        objects = [value for value in payloads if isinstance(value, dict)]
+        th = next((value["_throttle"] for value in objects if value.get("_throttle")), {})
+        if th.get("isThrottled") or th.get("quota", {}).get("search", {}).get("status") == "red":
+            throttled += 1
+        overloaded += bool(th.get("isOverloaded") or th.get("overallStatus") == "overloaded")
+        deferred += any(value.get("error") == "ops_deferred" or value.get("deferred") for value in objects)
+        rate_limits += any(value.get("error") == "rate_limited" or value.get("rateLimit") for value in objects)
         if isinstance(j, dict):
-            th = j.get("_throttle") or {}
-            if th.get("isThrottled") or (th.get("quota", {}).get("search", {}).get("status") == "red"):
-                throttled += 1
-            overloaded += bool(th.get("isOverloaded") or th.get("overallStatus") == "overloaded")
-            deferred += bool(j.get("error") == "ops_deferred" or j.get("deferred"))
-            rate_limits += bool(j.get("error") == "rate_limited" or j.get("rateLimit"))
             if isinstance(j.get("notFound"), list) and j["notFound"]:
                 not_found.extend(j["notFound"])
             if c["name"] == "search_patents" and c["input"].get("detail_level") == "summary":
