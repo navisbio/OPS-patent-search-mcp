@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from grade import load_stream, tool_calls, metrics
+from grade import load_stream, tool_calls, metrics, check, grade_scenario
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('codex_bench', Path(__file__).with_name('run-codex.py'))
 bench = importlib.util.module_from_spec(spec)
@@ -65,6 +66,66 @@ class CodexEvidenceTests(unittest.TestCase):
         ], exit_code=1)
         self.assertEqual(count, 0); self.assertEqual(calls, [])
         self.assertEqual(result['subtype'], 'error')
+
+    def test_credit_exhaustion_is_preserved(self):
+        _, _, result, _, _ = self.normalize([
+            {'type': 'turn.failed', 'error': {'message': 'Your workspace is out of credits. Ask your workspace owner to refill.'}},
+        ], exit_code=1)
+        self.assertEqual(result['failure_reason'], 'workspace_credits_exhausted')
+
+    def test_publication_assertion_accepts_greek_office(self):
+        catalog = json.loads((Path(__file__).parent / 'scenarios.json').read_text())
+        assertion = next(a for a in catalog['scenarios'][0]['ground_truth'] if a['type'] == 'report_regex_count_min')
+        self.assertTrue(check(assertion, 'EP1000001 US1000002 WO1000003 CN1000004 GR1011236', [], [])[0])
+        self.assertFalse(check(assertion, 'EP1000001 US1000002 WO1000003 CN1000004', [], [])[0])
+
+    def test_retry_archives_failed_stage_and_preserves_success(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            success = {'subtype': 'success', 'thread_id': 'original-thread'}
+            (output / 'case.task.json').write_text(json.dumps(success))
+            self.assertEqual(bench.cached_stage(output, 'case', 'task', True), ('original-thread', success))
+            (output / 'case.hallucination.json').write_text('{"subtype":"error"}')
+            (output / 'case.hallucination.codex.jsonl').write_text('old evidence')
+            self.assertIsNotNone(bench.cached_stage(output, 'case', 'hallucination', False))
+            self.assertIsNone(bench.cached_stage(output, 'case', 'hallucination', True))
+            self.assertEqual(next((output / 'attempts').glob('*/*.codex.jsonl')).read_text(), 'old evidence')
+            self.assertEqual(json.loads((output / 'case.task.json').read_text()), success)
+
+    def test_runner_stops_before_next_scenario_on_credit_exhaustion(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with patch('sys.argv', ['run-codex.py', '--results-dir', folder]), \
+                 patch.object(bench, 'credentials', return_value={}), \
+                 patch.object(bench.subprocess, 'check_output', return_value='test-commit'), \
+                 patch.object(bench.subprocess, 'run'), \
+                 patch.object(bench, 'run_stage', return_value=('thread', {'subtype': 'error', 'failure_reason': 'workspace_credits_exhausted'})) as stage:
+                with self.assertRaises(SystemExit) as stopped: bench.main()
+                self.assertEqual(stopped.exception.code, 2)
+                self.assertEqual(stage.call_count, 1)
+
+    def test_credit_blocked_task_does_not_fail_product_assertions(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            (output / 'case.task.stream.jsonl').write_text(json.dumps({'type': 'result', 'subtype': 'error',
+                'failure_reason': 'workspace_credits_exhausted'}) + '\n')
+            result = grade_scenario(folder, {'id': 'case', 'ground_truth': [{'type': 'report_regex_all', 'patterns': ['required']}]})
+            self.assertEqual(result['verdict'], 'blocked')
+            self.assertEqual(result['assertions_total'], 0)
+
+    def test_resume_runs_missing_grounding_without_repeating_successful_task(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            (output / 'case.task.json').write_text('{"subtype":"success","thread_id":"original"}')
+            (output / 'scenarios.json').write_text(json.dumps({'scenarios': [{'id': 'case', 'suite': 'holdout', 'prompt': 'task'}]}))
+            with patch('sys.argv', ['run-codex.py', '--results-dir', folder]), \
+                 patch.object(bench, 'credentials', return_value={}), \
+                 patch.object(bench.subprocess, 'check_output', return_value='test-commit'), \
+                 patch.object(bench.subprocess, 'run'), \
+                 patch.object(bench, 'run_stage', return_value=('original', {'subtype': 'success'})) as stage:
+                bench.main()
+                self.assertEqual(stage.call_count, 1)
+                self.assertEqual(stage.call_args.args[2], 'hallucination')
+                self.assertEqual(stage.call_args.args[-1], 'original')
 
 
 if __name__ == '__main__':

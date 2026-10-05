@@ -57,6 +57,7 @@ def config_args(model):
 
 def normalize(raw_path, stream_path, report_path, model, returncode, duration):
     events, thread, usage, calls, seen, turns, completed = [], None, {}, 0, set(), 0, False
+    failure_reason = None
     events.append({'type': 'system', 'subtype': 'init', 'model': model, 'evaluator': 'codex'})
     for line in raw_path.read_text().splitlines():
         try:
@@ -64,6 +65,10 @@ def normalize(raw_path, stream_path, report_path, model, returncode, duration):
         except json.JSONDecodeError:
             continue
         kind = event.get('type')
+        if kind in ('error', 'turn.failed'):
+            message = str(event.get('message') or event.get('error') or '')
+            if 'workspace is out of credits' in message.lower():
+                failure_reason = 'workspace_credits_exhausted'
         if kind == 'thread.started':
             thread = event.get('thread_id')
         if kind == 'turn.completed':
@@ -98,6 +103,9 @@ def normalize(raw_path, stream_path, report_path, model, returncode, duration):
     result = {'type': 'result', 'subtype': 'success' if returncode == 0 and completed and report else 'error',
               'result': report, 'num_turns': turns, 'duration_ms': round(duration * 1000),
               'total_cost_usd': None, 'usage': usage, 'evaluator': 'codex', 'exit_code': returncode}
+    result['thread_id'] = thread
+    if failure_reason:
+        result['failure_reason'] = failure_reason
     events.append(result)
     stream_path.write_text(''.join(json.dumps(e) + '\n' for e in events))
     return thread, calls, result
@@ -126,9 +134,38 @@ def run_stage(output, sid, stage, prompt, model, env, cwd, timeout, thread=None)
             time.sleep(1)
     thread, calls, result = normalize(raw, output / f'{sid}.{stage}.stream.jsonl', report, model,
                                       proc.returncode, time.monotonic() - started)
+    result['git_commit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     (output / f'{sid}.{stage}.json').write_text(json.dumps(result, indent=2))
     print(f'  {stage}: {result["subtype"]}, {calls} MCP calls, {int(time.monotonic()-started)}s', flush=True)
     return thread, result
+
+
+def existing_thread(output, sid, stage, result):
+    if result.get('thread_id'):
+        return result['thread_id']
+    # Older run metadata did not store the thread; recover it from the native log.
+    raw = output / f'{sid}.{stage}.codex.jsonl'
+    if raw.exists():
+        for line in raw.read_text().splitlines():
+            try: event = json.loads(line)
+            except ValueError: continue
+            if event.get('type') == 'thread.started': return event.get('thread_id')
+    return None
+
+
+def cached_stage(output, sid, stage, retry_failed):
+    """Preserve successes; archive failed attempts before explicitly retrying."""
+    path = output / f'{sid}.{stage}.json'
+    if not path.exists(): return None
+    result = json.loads(path.read_text())
+    if result.get('subtype') == 'success' or not retry_failed:
+        print(f'SKIP existing {sid}: {stage} ({result.get("subtype")})', flush=True)
+        return existing_thread(output, sid, stage, result), result
+    archive = output / 'attempts' / datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    archive.mkdir(parents=True)
+    for file in output.glob(f'{sid}.{stage}.*'):
+        shutil.move(str(file), str(archive / file.name))
+    return None
 
 
 def main():
@@ -137,6 +174,7 @@ def main():
     ap.add_argument('--results-dir', type=Path)
     ap.add_argument('--model', default=os.environ.get('SMOKETEST_MODEL') or configured_model())
     ap.add_argument('--stage-timeout', type=int, default=900)
+    ap.add_argument('--retry-failed', action='store_true', help='Archive and retry failed stages; successful stages are preserved')
     args = ap.parse_args()
     if not (ROOT / 'dist/index.js').exists():
         raise SystemExit('Run npm run build before the bench')
@@ -150,25 +188,38 @@ def main():
     else:
         catalog = json.loads(snapshot.read_text())
         selected = [s for s in catalog['scenarios'] if not args.scenario or s['id'] == args.scenario]
-    (output / 'git-commit.txt').write_text(subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True))
-    (output / 'harness.json').write_text(json.dumps({'evaluator': 'codex', 'model': args.model,
+    if not (output / 'git-commit.txt').exists():
+        (output / 'git-commit.txt').write_text(subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True))
+    harness = output / 'harness.json'
+    if harness.exists() and json.loads(harness.read_text()).get('model') != args.model:
+        raise SystemExit('Model differs from this run; use a new results directory')
+    if not harness.exists(): harness.write_text(json.dumps({'evaluator': 'codex', 'model': args.model,
         'stage_timeout_seconds': args.stage_timeout, 'catalog_turn_and_dollar_caps': 'not supported by Codex CLI; wall-time cap applies',
         'cost_reporting': 'Codex CLI exposes token usage but no dollar cost'}, indent=2))
     print(f'Output directory: {output}', flush=True)
     env = credentials()
+    credits_exhausted = False
     with tempfile.TemporaryDirectory(prefix='ops-codex-bench-') as cwd:
         for sc in selected:
             sid = sc['id']
-            if (output / f'{sid}.task.json').exists():
-                print(f'SKIP existing scenario: {sid}', flush=True); continue
             print(f'TEST: {sid} [{sc["suite"]}]', flush=True)
-            thread, result = run_stage(output, sid, 'task', sc['prompt'], args.model, env, cwd, args.stage_timeout)
-            if result['subtype'] != 'success' or not thread: continue
-            run_stage(output, sid, 'hallucination', GROUNDING, args.model, env, cwd, args.stage_timeout, thread)
-            if sc['suite'] != 'holdout':
-                run_stage(output, sid, 'feedback', CRITIQUE, args.model, env, cwd, args.stage_timeout, thread)
+            thread = None
+            stages = [('task', sc['prompt']), ('hallucination', GROUNDING)]
+            if sc['suite'] != 'holdout': stages.append(('feedback', CRITIQUE))
+            for stage, prompt in stages:
+                cached = cached_stage(output, sid, stage, args.retry_failed)
+                if cached is None:
+                    thread, result = run_stage(output, sid, stage, prompt, args.model, env, cwd, args.stage_timeout, thread)
+                    if result.get('failure_reason') == 'workspace_credits_exhausted':
+                        credits_exhausted = True
+                        print('STOP: Codex workspace credits exhausted; no more evaluator calls will be attempted.', flush=True)
+                else:
+                    thread, result = cached
+                if result['subtype'] != 'success' or not thread: break
             subprocess.run(['python3', str(HERE / 'grade.py'), str(output), '--quiet'], check=True)
+            if credits_exhausted: break
     subprocess.run(['python3', str(HERE / 'grade.py'), str(output)], check=True)
+    if credits_exhausted: raise SystemExit(2)
 
 
 if __name__ == '__main__':

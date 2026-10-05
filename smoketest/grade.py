@@ -173,7 +173,7 @@ def grade_scenario(d, sc):
     mets, partial = metrics(calls)
     r = meta["result"] or {}
     assertions = []
-    for a in sc.get("ground_truth", []):
+    for a in ([] if r.get("failure_reason") == "workspace_credits_exhausted" else sc.get("ground_truth", [])):
         ok, detail = check(a, report, calls, partial)
         assertions.append({"type": a["type"], "why": a.get("why"), "pass": ok, "detail": detail})
     g = {
@@ -187,6 +187,9 @@ def grade_scenario(d, sc):
     }
     g["verdict"] = ("pass" if g["assertions_passed"] == g["assertions_total"] and mets["tool_calls"] > 0 and r.get("subtype") == "success"
                     else "fail")
+    if r.get("failure_reason") == "workspace_credits_exhausted":
+        g["verdict"] = "blocked"
+        g["blocked_reason"] = r["failure_reason"]
     return g
 
 
@@ -219,6 +222,7 @@ def main():
         "overloaded_responses": sum(g["metrics"]["overloaded_responses"] for g in grades),
         "deferred_responses": sum(g["metrics"]["deferred_responses"] for g in grades),
         "rate_limit_errors": sum(g["metrics"]["rate_limit_errors"] for g in grades),
+        "blocked": sum(g["verdict"] == "blocked" for g in grades),
         "assertions_passed": sum(g["assertions_passed"] for g in grades),
         "assertions_total": sum(g["assertions_total"] for g in grades),
         "grounding_pass": sum((g["grounding"] or {}).get("pass", 0) for g in grades),
@@ -237,11 +241,13 @@ def main():
         print(f"{g['scenario']:22} {g['suite']:8} {g['verdict']:7} {g['assertions_passed']}/{g['assertions_total']:<5} "
               f"{g['metrics']['tool_calls']:5} {g['metrics']['tool_errors']:4} {g['metrics']['oversized_results']:3} "
               f"{g['metrics']['throttled_responses']:3} {gr.get('pass', 0):4}/{gr.get('fail', 0):<4} {cost_label:>6}")
+        if g.get("blocked_reason"):
+            print(f"    BLOCKED: {g['blocked_reason']}; assertions not assessed")
         for a in g["assertions"]:
             if not a["pass"]:
                 print(f"    FAIL {a['type']}: {a['detail']}  ({a['why']})")
     total_cost_label = "not reported" if summary["cost_usd"] is None else f"${summary['cost_usd']:.2f}"
-    print(f"TOTAL: {summary['passed']}/{summary['scenarios']} scenarios pass, assertions {summary['assertions_passed']}/{summary['assertions_total']}, "
+    print(f"TOTAL: {summary['passed']}/{summary['scenarios']} scenarios pass, {summary['blocked']} blocked, assertions {summary['assertions_passed']}/{summary['assertions_total']}, "
           f"errors {summary['tool_errors']}, oversized {summary['oversized_results']}, throttled {summary['throttled_responses']}, "
           f"grounding {summary['grounding_pass']}/{summary['grounding_fail']}, cost {total_cost_label}")
 

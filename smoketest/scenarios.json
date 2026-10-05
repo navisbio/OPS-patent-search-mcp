@@ -16,7 +16,7 @@
         },
         {
           "type": "report_regex_count_min",
-          "pattern": "\\b(?:EP|US|WO|CN|KR|JP|AU|CA|GB|DE)\\d{6,}\\b",
+          "pattern": "\\b[A-Z]{2}\\d{6,}\\b",
           "min": 5,
           "why": "five publication numbers"
         },

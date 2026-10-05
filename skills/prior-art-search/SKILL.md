@@ -117,7 +117,7 @@ This returns:
 
 ## Step 6: Deep-Read Relevant Sections
 
-When `resolvedDocuments` shows claims came from a family member (a WO for a US number), say so where the claims are quoted, and label PCT claims "as filed, unexamined". Granted claims that fail to fetch must be reported as not read, not paraphrased from the application.
+When `resolvedDocuments` shows claims came from a family member (a WO for a US number), identify the actual source publication and kind code where the claims are quoted. For WO/PCT sources, label them "published PCT application claims; amendment/version status not verified" unless returned evidence establishes the version. Do not assume they are as filed or unexamined: [PCT Rule 48.2(f)](https://www.wipo.int/en/web/pct-system/texts/rules/r48) allows publication of both original and Article 19 amended claims. A WO family member does not establish the scope of national granted claims. Granted claims that fail to fetch must be reported as not read, not paraphrased from the application.
 
 For patents with keyword matches, read the specific sections:
 

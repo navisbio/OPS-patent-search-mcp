@@ -39,8 +39,22 @@ export function isSpcEvent(e: LegalEvent): boolean {
   );
 }
 
+/** Explicit application refusal only; notices of an intended refusal are not decisions. */
+export function isRefusalEvent(e: LegalEvent): boolean {
+  const code = (e.eventCode ?? "").trim().toUpperCase();
+  const desc = (e.description ?? "").trim().toUpperCase();
+  const free = (e.freeText ?? "").toUpperCase();
+  return code === "18R" ||
+    (code === "STAA" && /\b(?:THE )?APPLICATION HAS BEEN REFUSED\b/.test(free)) ||
+    /^(?:PATENT )?APPLICATION REFUSED(?:\s|$)/.test(desc) ||
+    /^REFUSAL OF (?:THE )?(?:PATENT )?APPLICATION(?:\s|$)/.test(desc);
+}
+
 export function summarizeLegalStatus(events: LegalEvent[]): {
   granted: boolean;
+  /** A refusal was recorded; this does not establish the outcome of any appeal. */
+  refused: boolean;
+  refusalEvents: LegalEvent[];
   lapsed: boolean;
   oppositionFiled: boolean;
   spcOrPte: boolean;
@@ -55,6 +69,7 @@ export function summarizeLegalStatus(events: LegalEvent[]): {
   spcOrPteDetails: string[];
 } {
   let granted = false;
+  const refusalEvents: LegalEvent[] = [];
   let lapsed = false;
   let oppositionFiled = false;
   let spcOrPte = false;
@@ -73,6 +88,10 @@ export function summarizeLegalStatus(events: LegalEvent[]): {
     if (isGrantEvent(e)) {
       granted = true;
       keyEvents.push(`${ctry}Granted${dateStr}`);
+    }
+    if (isRefusalEvent(e)) {
+      refusalEvents.push(e);
+      keyEvents.push(`${ctry}Application refused${dateStr}${e.effectiveDate ? ` (effective ${e.effectiveDate})` : ""}`);
     }
     // US abandonment — STCB = examination discontinued / abandoned
     if (code === "STCB" || desc.includes("abandoned")) {
@@ -140,7 +159,7 @@ export function summarizeLegalStatus(events: LegalEvent[]): {
   }
 
   return {
-    granted, lapsed, oppositionFiled, spcOrPte,
+    granted, refused: refusalEvents.length > 0, refusalEvents, lapsed, oppositionFiled, spcOrPte,
     spcStates: [...spcStates].sort(),
     keyEvents: [...new Set(keyEvents)],
     lapsedStates: [...lapsedStates].sort(),
