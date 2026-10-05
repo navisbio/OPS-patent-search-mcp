@@ -49,10 +49,13 @@ Note: the patent-search MCP server is intentionally not loaded for this reflecti
 HALLUCINATION_CHECK_PROMPT="I want you to check for each of the companies/entities/patents you mentioned if they really exist or if you hallucinated them. For each one, verify by searching the patent database again. Report a table with: entity name, claimed count, verified count, and whether the verification passed or failed."
 
 # Every registered tool must be listed here or the evaluator is blocked from it.
-MCP_TOOLS=$(python3 - "$PLUGIN_DIR/src/index.ts" <<'EOF'
+MCP_TOOLS=$(python3 - "$PLUGIN_DIR/src" <<'EOF'
 import re, sys
-src = open(sys.argv[1]).read()
-names = re.findall(r'server\.registerTool\(\s*\n\s*"([a-z_]+)"', src)
+from pathlib import Path
+names = sorted({name for path in Path(sys.argv[1]).rglob("*.ts")
+                for name in re.findall(r'server\.registerTool\(\s*"([a-z_]+)"', path.read_text())})
+if not names:
+    raise SystemExit("No MCP tool registrations found; refusing to run without tools")
 print(",".join("mcp__plugin_ops-patent-search_ops-patent-search__" + n for n in names))
 EOF
 )
@@ -75,7 +78,7 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 echo "Output directory: $OUTPUT_DIR"
-cp "$CATALOG" "$OUTPUT_DIR/scenarios.json"   # the catalog as it was when this run happened
+cp -f "$CATALOG" "$OUTPUT_DIR/scenarios.json"   # the catalog as it was when this run happened
 git -C "$PLUGIN_DIR" rev-parse HEAD 2>/dev/null > "$OUTPUT_DIR/git-commit.txt" || true
 
 # Run the evaluator from a scratch directory outside the repo. Anywhere inside
