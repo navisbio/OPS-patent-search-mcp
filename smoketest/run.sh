@@ -49,16 +49,7 @@ Note: the patent-search MCP server is intentionally not loaded for this reflecti
 HALLUCINATION_CHECK_PROMPT="I want you to check for each of the companies/entities/patents you mentioned if they really exist or if you hallucinated them. For each one, verify by searching the patent database again. Report a table with: entity name, claimed count, verified count, and whether the verification passed or failed."
 
 # Every registered tool must be listed here or the evaluator is blocked from it.
-MCP_TOOLS=$(python3 - "$PLUGIN_DIR/src" <<'EOF'
-import re, sys
-from pathlib import Path
-names = sorted({name for path in Path(sys.argv[1]).rglob("*.ts")
-                for name in re.findall(r'server\.registerTool\(\s*"([a-z_]+)"', path.read_text())})
-if not names:
-    raise SystemExit("No MCP tool registrations found; refusing to run without tools")
-print(",".join("mcp__plugin_ops-patent-search_ops-patent-search__" + n for n in names))
-EOF
-)
+MCP_TOOLS=$(node "$SCRIPT_DIR/list-tools.mjs" "$PLUGIN_DIR/dist/index.js")
 ALLOWED_TOOLS="$MCP_TOOLS,Read,Write,Edit,Grep,Glob,Bash,WebSearch,WebFetch,Skill,Agent"
 
 # ── Credentials and CLI ──────────────────────────────────────────────────────

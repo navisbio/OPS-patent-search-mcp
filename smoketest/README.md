@@ -1,6 +1,6 @@
 # Bench
 
-A bench of realistic patent-analysis tasks, run by a headless Claude Code
+A bench of realistic patent-analysis tasks, run by a headless Codex or Claude Code
 evaluator against the live server, with three independent measures of the
 result: deterministic ground-truth assertions, a separate judge model, and a
 recurrence index of findings across runs. The evaluator's own critique is kept
@@ -21,6 +21,27 @@ major filers.
 | `results/<timestamp>[_model]/` | One directory per run, gitignored. Contains the catalog snapshot and commit hash the run used. |
 
 ## Running
+
+The Codex runner uses the same catalog and assertions, loads the local MCP over
+stdio, and makes scenarios sequentially. It uses the configured Codex model by
+default, with unrelated user MCP configuration disabled. Raw Codex events are
+preserved alongside a compatible stream for the existing grader.
+
+```bash
+npm run build
+python3 smoketest/run-codex.py
+python3 smoketest/run-codex.py --scenario basic-search
+python3 smoketest/run-codex.py --results-dir smoketest/results/<run>  # resume, skip existing cases
+python3 smoketest/judge-codex.py smoketest/results/<run>  # fresh Codex contexts, same rubric
+```
+
+Codex does not expose Claude's turn or dollar caps. The runner instead applies a
+15-minute wall-time limit to each task, grounding check, and critique; change it
+with `--stage-timeout`. Dollar costs are not available from the Codex CLI; token
+usage is saved in the stage metadata. Model changes mean scores can be compared
+for factual regressions, but do not isolate server changes from evaluator changes.
+
+The legacy Claude runner remains available:
 
 ```bash
 npm run build
