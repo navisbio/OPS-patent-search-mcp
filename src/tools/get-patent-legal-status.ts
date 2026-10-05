@@ -4,7 +4,7 @@ import { EpoClient, OpsApiError, isOpsInterruption } from "../epo-client.js";
 import { parseLegalEvents, type LegalEvent } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
 import { normaliseDocNumber } from "../fallback.js";
-import { isGrantEvent, isSpcEvent, summarizeLegalStatus } from "../legal.js";
+import { isGrantEvent, isRefusalEvent, isSpcEvent, summarizeLegalStatus } from "../legal.js";
 import { documentNumberParam, inputFormatParam } from "./params.js";
 
 export function registerGetPatentLegalStatus(server: McpServer, client: EpoClient) {
@@ -17,10 +17,11 @@ server.registerTool(
 
 IMPORTANT — LEGAL: Only report legal status based on events returned by this tool. Never guess whether a patent is in force, expired, or withdrawn.
 
-Use this to determine whether a patent is currently in force (granted and not lapsed), pending (application), or expired/withdrawn — which changes its competitive significance significantly.
+Use the returned history to assess grant, refusal, lapse and other events. Summary flags indicate recorded events, not a definitive current legal status. All-false flags do not establish that an application is pending. A refusal may be appealed or superseded; check later events and the relevant register before concluding its present status.
 
 Returns a statusSummary object with:
-- Flags: granted, lapsed, oppositionFiled, spcOrPte
+- Flags: granted, refused, lapsed, oppositionFiled, spcOrPte
+- refusalEvents: explicit refusal records with their original code, country, dates and text, regardless of event_types filtering
 - spcStates: EP contracting states with an SPC registration
 - SPC certificate numbers themselves (kind I1/I2/C1, e.g. LU92936I) have no legal-status record: OPS files SPC events under the basic patent (EP2170959), so query that number
 - SPC expiry is not provided by OPS; spcOrPteDetails carries the marketing-authorisation number and date from the national register entry, from which the term can be estimated
@@ -35,7 +36,7 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
       document_number: documentNumberParam.describe('Patent publication number, e.g. "EP1000000" or "US10000000"'),
       input_format: inputFormatParam,
       event_types: z
-        .array(z.enum(["grant", "lapse", "opposition", "spc_pte", "withdrawal", "abandonment", "fee_payment"]))
+        .array(z.enum(["grant", "refusal", "lapse", "opposition", "spc_pte", "withdrawal", "abandonment", "fee_payment"]))
         .optional()
         .describe('Filter to specific event categories. Omit to return all events. Use ["grant", "lapse", "spc_pte"] for a concise view.'),
       condensed: z
@@ -86,6 +87,7 @@ Plus the full list of raw legal events. Each event now includes refCountryCode (
           const code = (e.eventCode ?? "").toUpperCase();
           const desc = (e.description ?? "").toLowerCase();
           if (typeSet.has("grant") && isGrantEvent(e)) return true;
+          if (typeSet.has("refusal") && isRefusalEvent(e)) return true;
           if (typeSet.has("lapse") && (code === "PG25" || desc.includes("lapse") || desc.includes("ceased") || desc.includes("expired") || desc.includes("not in force"))) return true;
           if (typeSet.has("opposition") && (code.startsWith("OPP") || (desc.includes("opposition") && !desc.includes("no opposition")))) return true;
           if (typeSet.has("spc_pte") && isSpcEvent(e)) return true;

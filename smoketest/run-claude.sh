@@ -12,8 +12,8 @@ set -euo pipefail
 # Afterwards grade.py checks the ground-truth assertions and writes summary.json.
 #
 # Usage:
-#   ./smoketest/run.sh                    # every scenario
-#   ./smoketest/run.sh basic-search       # one scenario
+#   ./smoketest/run-claude.sh                    # every scenario
+#   ./smoketest/run-claude.sh basic-search       # one scenario
 # Environment:
 #   SMOKETEST_MODEL=sonnet|opus|<id>      evaluator model (default: CLI default)
 #   SMOKETEST_SUITE=all|dev|holdout       which scenarios (default all)

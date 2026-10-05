@@ -14,7 +14,7 @@ major filers.
 | File | Role |
 |---|---|
 | `scenarios.json` | The catalog: prompt, turn and cost caps, suite (`dev` or `holdout`), ground-truth assertions. |
-| `run.sh` | Runs the scenarios, then `grade.py`; optionally the judge and findings extraction. |
+| `run-claude.sh` | Runs the scenarios, then `grade.py`; optionally the judge and findings extraction. |
 | `grade.py` | Deterministic grader: metrics from the tool stream plus the catalog's assertions. Writes `<case>.grade.json` and `summary.json`. |
 | `judge.py` | Separate model scores each report from the task, the compact tool log and the report only. `score` for absolute rubric scores, `compare` for pairwise A/B between two runs. |
 | `findings.py` | Turns critiques and judge output into findings with stable keys, keeps `findings-index.json`, reports recurrence and regressions. |
@@ -31,7 +31,8 @@ preserved alongside a compatible stream for the existing grader.
 npm run build
 python3 smoketest/run-codex.py
 python3 smoketest/run-codex.py --scenario basic-search
-python3 smoketest/run-codex.py --results-dir smoketest/results/<run>  # resume, skip existing cases
+python3 smoketest/run-codex.py --results-dir smoketest/results/<run>  # resume missing stages, preserve successful ones
+python3 smoketest/run-codex.py --results-dir smoketest/results/<run> --retry-failed  # archive and retry failed stages
 python3 smoketest/judge-codex.py smoketest/results/<run>  # fresh Codex contexts, same rubric
 ```
 
@@ -40,16 +41,21 @@ Codex does not expose Claude's turn or dollar caps. The runner instead applies a
 with `--stage-timeout`. Dollar costs are not available from the Codex CLI; token
 usage is saved in the stage metadata. Model changes mean scores can be compared
 for factual regressions, but do not isolate server changes from evaluator changes.
+The runner stops when Codex reports workspace credit exhaustion. After credits
+are restored, use `--retry-failed` to resume. Original failed attempts remain in
+`attempts/`; successful reports and the original run metadata are preserved.
+New stage metadata records the current git commit. Prefer a new results directory
+when testing a different server revision so the run measures one implementation.
 
 The legacy Claude runner remains available:
 
 ```bash
 npm run build
-./smoketest/run.sh                                      # all scenarios, grade only
-SMOKETEST_MODEL=sonnet ./smoketest/run.sh               # choose the evaluator model
-SMOKETEST_SUITE=dev ./smoketest/run.sh                  # dev or holdout only
-SMOKETEST_JUDGE=1 SMOKETEST_FINDINGS=1 ./smoketest/run.sh
-SMOKETEST_BASELINE=smoketest/results/<previous run> SMOKETEST_JUDGE=1 ./smoketest/run.sh
+./smoketest/run-claude.sh                                      # all scenarios, grade only
+SMOKETEST_MODEL=sonnet ./smoketest/run-claude.sh               # choose the evaluator model
+SMOKETEST_SUITE=dev ./smoketest/run-claude.sh                  # dev or holdout only
+SMOKETEST_JUDGE=1 SMOKETEST_FINDINGS=1 ./smoketest/run-claude.sh
+SMOKETEST_BASELINE=smoketest/results/<previous run> SMOKETEST_JUDGE=1 ./smoketest/run-claude.sh
 
 python3 smoketest/grade.py smoketest/results/<run>                    # re-grade after editing assertions
 python3 smoketest/judge.py score smoketest/results/<run> [--scenario id]
