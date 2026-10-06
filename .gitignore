@@ -49,6 +49,7 @@ smoketest/results/
 node_modules/
 dist/
 server/
+package-lock.json
 *.mcpb
 test.js
 *.db
