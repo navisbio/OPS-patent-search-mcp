@@ -22,6 +22,8 @@ For exhaustive patent landscape analysis, systematic FTO assessments, or large-s
 
 ## Setup
 
+Requires Node.js 22 or newer.
+
 1. Register at [developers.epo.org](https://developers.epo.org/) for a Consumer Key and Secret (free tier available).
 
 2. Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
