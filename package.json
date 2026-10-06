@@ -1,6 +1,6 @@
 {
   "name": "ops-patent-search",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Unofficial MCP server for exploring patents via the EPO Open Patent Services (OPS) API. Not affiliated with the EPO. An exploratory tool for Claude Desktop and other MCP clients — not a substitute for specialised patent search platforms.",
   "main": "dist/index.js",
   "bin": {
@@ -46,16 +46,16 @@
     "url": "https://github.com/navisbio/OPS-patent-search-mcp/issues"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "zod": "^4.3.6"
+    "@modelcontextprotocol/sdk": "^1.32.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^25.3.3",
-    "esbuild": "^0.27.3",
-    "tsx": "^4.21.0",
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
 }
