@@ -154,38 +154,9 @@ claude --plugin-dir /path/to/ops-patent-search
 
 `.mcp.json` is the *plugin* server manifest: its `${CLAUDE_PLUGIN_ROOT}` path is only expanded when the server is loaded as a plugin. Enabling it as a plain project MCP server instead leaves the variable unexpanded and the server exits with `Cannot find module '.../${CLAUDE_PLUGIN_ROOT}/dist/index.js'`. Use `--plugin-dir` as above, or register a separate absolute-path server with `claude mcp add`.
 
-## What must never be committed
-
-This is a **public** repository. The following stay local and are enforced by
-both `.gitignore` and a `pre-commit` hook in `.githooks/`:
-
-| Path | Why |
-|---|---|
-| `.env` | EPO OPS credentials |
-| `.claude/` | local permission grants and machine paths |
-| `.beads/`, `.dolt/` | issue tracker database — never synced to this remote |
-| `docs/` | internal write-ups and client-adjacent analyses |
-| `smoketest/results/` | full evaluator transcripts naming real companies |
-| `*.mcpb`, `dist/`, `server/` | build output |
-
-`.claude-plugin/` is **not** in this list — it ships with the plugin.
-
-The hook also scans staged content for credential-shaped strings and for
-client-identifying terms, so scenario prompts and examples stay generic. The
-term list itself is **not** in the repo — a curated list of client names would
-be the disclosure. Put it in `.githooks/client-terms.local` (gitignored), one
-regex per line; without that file the term check is inactive and the hook says
-so. The hook is enabled automatically by `npm install`; to enable it by hand:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-A deliberate exception for one commit: `ALLOW_SENSITIVE=1 git commit ...`
-
 ## Privacy
 
-This server communicates only with the EPO OPS API (`ops.epo.org`) using your credentials. No data is collected or sent to third parties.
+This server communicates only with the EPO OPS API (`ops.epo.org`) using your credentials.
 
 ## License
 
