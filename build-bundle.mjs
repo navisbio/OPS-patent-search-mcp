@@ -7,7 +7,7 @@ await build({
   entryPoints: ["src/index.ts"],
   bundle: true,
   platform: "node",
-  target: "node18",
+  target: "node22",
   format: "cjs",
   outfile: "server/bundle.cjs",
   // Mark nothing as external — bundle everything including the MCP SDK and zod
