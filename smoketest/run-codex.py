@@ -43,6 +43,8 @@ def config_args(model):
                     'scenario assertions, or prior results. Work independently from the supplied task; do not ask '
                     'clarifying questions. Call MCP tools sequentially. Follow deferral/retry instructions and retain '
                     'partial results. Do not fabricate text or numbers. Return a self-contained final report.')
+    # argv list without a shell; nothing is interpolated into a command string.
+    # no-dd-sa:python-flask/command-injection
     args = ['--ignore-user-config', '--skip-git-repo-check', '--json',
             '-c', 'sandbox_mode="read-only"', '-c', 'approval_policy="never"',
             '-c', 'web_search="disabled"', '-c', 'features.multi_agent=false',
@@ -114,6 +116,7 @@ def normalize(raw_path, stream_path, report_path, model, returncode, duration):
 def run_stage(output, sid, stage, prompt, model, env, cwd, timeout, thread=None):
     raw = output / f'{sid}.{stage}.codex.jsonl'
     report = output / f'{sid}.{stage}.txt'
+    # no-dd-sa:python-flask/command-injection
     cmd = ['codex', 'exec'] + (['resume', thread] if thread else []) + config_args(model)
     cmd += ['--output-last-message', str(report), '-']
     started = time.monotonic()

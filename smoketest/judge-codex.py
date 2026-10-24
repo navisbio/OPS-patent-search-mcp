@@ -43,6 +43,8 @@ def main():
             schema = Path(cwd) / 'schema.json'
             schema.write_text(json.dumps(strict_schema(SCORE_SCHEMA)))
             report = output / f'{sid}.judge.response.json'
+            # argv list without a shell; nothing is interpolated into a command string.
+            # no-dd-sa:python-flask/command-injection
             cmd = ['codex', 'exec', '--ignore-user-config', '--skip-git-repo-check', '--ephemeral', '--json',
                    '-c', 'sandbox_mode="read-only"', '-c', 'approval_policy="never"',
                    '-c', 'web_search="disabled"', '-c', 'features.multi_agent=false',
