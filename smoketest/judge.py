@@ -15,7 +15,7 @@ score writes <case>.judge.json; compare writes <case>.pairwise.json into the
 candidate directory. Both print a table. Order in compare is randomised per
 scenario so position bias cannot decide a tie.
 """
-import argparse, json, os, random, re, subprocess, sys, tempfile
+import argparse, json, os, re, secrets, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FALLBACK_MODEL = os.environ.get("SMOKETEST_FALLBACK_MODEL", "sonnet")
@@ -216,7 +216,7 @@ def compare(args, catalog):
     print(f"\nPAIRWISE ({args.model}) baseline={os.path.basename(a_dir)} candidate={os.path.basename(b_dir)}")
     for sid in ids:
         ca, cb = load_case(a_dir, sid, catalog), load_case(b_dir, sid, catalog)
-        swap = random.random() < 0.5  # A shown first is the candidate when swap is True
+        swap = secrets.randbelow(2) == 1  # A shown first is the candidate when swap is True
         first, second = (cb, ca) if swap else (ca, cb)
         half = LOG_BUDGET // 2
         prompt = (f"TASK:\n{ca['task']}\n\n=== REPORT A ===\nTOOL LOG A ({len(first['calls'])} calls):\n{compact_log(first['calls'], half)}\n\nREPORT A:\n{first['report'][:35000]}\n\n"
