@@ -1,29 +1,18 @@
-# Source code (server/bundle.cjs has everything)
-node_modules/
-src/
-dist/
-*.ts
-tsconfig.json
-build-bundle.mjs
+# Allowlist: ignore everything, then re-include what the bundle ships.
+# A blocklist let local-only files (.beads/, .githooks/*.local, scratch
+# scripts in server/) slip into the archive.
+/*
 
-# Dev/test files
-test.js
-tests/
-integration_tests/
-smoketest/
+!/manifest.json
+!/package.json
+!/README.md
+!/LICENSE
 
-# Dev config
-.env
-.gitignore
-.npmignore
-.mcp.json
-.claude-plugin/
-.claude/
-package-lock.json
+# server/bundle.cjs has everything (MCP SDK and zod included)
+!/server
+/server/*
+!/server/bundle.cjs
 
-# Docs (not needed in bundle)
-docs/
-CLAUDE.md
-
-# Previous bundles
-*.mcpb
+# Workflow skills and commands
+!/skills
+!/commands
