@@ -133,21 +133,22 @@ npm run test:unit          # Offline regression tests (no credentials needed)
 npm test                   # Integration tests (requires PATENT_CONSUMER_KEY and PATENT_CONSUMER_SECRET_KEY in .env)
 ```
 
-**Scenario tests:**
+**Workflow integration tests** (live API, deterministic assertions on multi-tool workflows):
 ```bash
 npx tsx integration_tests/run-all.ts
 ```
 
-**Smoketest** (end-to-end eval harness via headless Claude Code):
+**Agent bench** (an AI agent works through realistic patent tasks against the live API, and the result is graded):
 ```bash
-./smoketest/run-claude.sh                          # all tests
-./smoketest/run-claude.sh basic-search             # single test
-SMOKETEST_MODEL=sonnet ./smoketest/run-claude.sh   # pick the evaluator model (default: CLI default)
+./smoketest/run-claude.sh                          # all scenarios, Claude Code as the agent
+./smoketest/run-claude.sh basic-search             # one scenario
+SMOKETEST_MODEL=sonnet ./smoketest/run-claude.sh   # pick the agent model (default: CLI default)
+python3 smoketest/run-codex.py                     # same catalog, Codex as the agent
 ```
 
-Each smoketest runs a 3-message conversation: execute the task using the MCP tools, verify entities against the database (hallucination check), then collect structured feedback on what worked and what should be improved. Results land in `smoketest/results/<timestamp>[_model]/` as `.task.txt`, `.hallucination.txt`, and `.feedback.txt` per test. The evaluator runs from a scratch directory outside the repo so the repo's own `.mcp.json` is not loaded a second time as a project server.
+The bench is how this server was improved. `smoketest/scenarios.json` holds nine tasks a patent analyst would actually ask (prior art search, FTO check, LOE timeline, citation network, landscape). Each scenario is one agent session in three messages: do the task with the MCP tools, re-query the database to verify every patent number and entity the report cited, then critique the tools. Results land in `smoketest/results/<timestamp>[_model]/` as `.task.txt`, `.hallucination.txt`, and `.feedback.txt` per scenario. The agent runs from a scratch directory outside the repo so the repo's own `.mcp.json` is not loaded a second time as a project server.
 
-Three things measure the result, none of them the evaluator's own opinion: ground-truth assertions per scenario (`smoketest/grade.py`), a separate judge model that scores each report from the tool log and can compare two runs pairwise (`smoketest/judge.py`), and a findings index that tracks which issues recur across runs (`smoketest/findings.py`). Two scenarios are hold-outs whose critiques are never collected. The fix protocol, from reproduce-before-fix to marking a finding resolved, is in [smoketest/README.md](smoketest/README.md).
+The critique is a bug-report generator, not the measure of quality. Three things measure the result, none of them the agent's own opinion: ground-truth assertions per scenario (`smoketest/grade.py`), a separate judge model that scores each report from the tool log and can compare two runs pairwise (`smoketest/judge.py`), and a findings index that tracks which issues recur across runs (`smoketest/findings.py`). Two scenarios are hold-outs whose critiques are never collected. A person reviews each proposed fix list before code changes. The fix protocol, from reproduce-before-fix to marking a finding resolved, is in [smoketest/README.md](smoketest/README.md).
 
 **Run as Claude Code plugin (local dev):**
 ```bash
