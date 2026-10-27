@@ -20,7 +20,9 @@
     "entry_point": "server/bundle.cjs",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/server/bundle.cjs"],
+      "args": [
+        "${__dirname}/server/bundle.cjs"
+      ],
       "env": {
         "PATENT_CONSUMER_KEY": "${user_config.PATENT_CONSUMER_KEY}",
         "PATENT_CONSUMER_SECRET_KEY": "${user_config.PATENT_CONSUMER_SECRET_KEY}"
@@ -63,6 +65,10 @@
     {
       "name": "search_in_patent_text",
       "description": "Search for keywords within the full text of a patent (claims + description). Returns matching snippets with sectionOffset for targeted reading via get_patent_claims or get_patent_description."
+    },
+    {
+      "name": "search_and_filter_fulltext",
+      "description": "Run a CQL search, then keep only the hits whose claims or description actually contain the given terms. One call instead of a search plus a full-text search per hit."
     },
     {
       "name": "get_patent_family",
