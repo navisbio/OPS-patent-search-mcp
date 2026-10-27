@@ -1,7 +1,7 @@
-# Bench
+# Agent bench
 
-A bench of realistic patent-analysis tasks, run by a headless Codex or Claude Code
-evaluator against the live server, with three independent measures of the
+A bench of realistic patent-analysis tasks, each worked through by a headless
+Codex or Claude Code agent against the live server, with three independent measures of the
 result: deterministic ground-truth assertions, a separate judge model, and a
 recurrence index of findings across runs. The evaluator's own critique is kept
 as a bug-report generator. It is not the measure of whether a report is good,

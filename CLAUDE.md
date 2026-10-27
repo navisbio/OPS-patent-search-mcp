@@ -15,7 +15,7 @@ Tests require valid `PATENT_CONSUMER_KEY` and `PATENT_CONSUMER_SECRET_KEY` env v
 
 ## Architecture
 
-This is a 3-file MCP server published as `ops-patent-search` on npm.
+This is an MCP server published as `ops-patent-search` on npm. Core modules live in `src/`; each tool is registered from its own file in `src/tools/`.
 
 **[src/epo-client.ts](src/epo-client.ts)** — HTTP client for the EPO OPS REST API (`https://ops.epo.org/3.2/rest-services`). Handles OAuth2 `client_credentials` token acquisition and caching (with 60s pre-expiry refresh). Throws `OpsApiError` with human-readable messages parsed from OPS XML error responses instead of raw XML.
 
@@ -25,14 +25,14 @@ This is a 3-file MCP server published as `ops-patent-search` on npm.
 - `paginateParagraphs` — slices a paragraph array by offset+limit+maxCharacters, returns `nextOffset` for continuation
 - `searchKeywordsInParagraphs` — regex-based keyword search across paragraphs, returns snippets with `paragraphIndex` usable as `offset` in the reading tools
 
-**[src/index.ts](src/index.ts)** — MCP server wiring. Defines 9 tools using `@modelcontextprotocol/sdk` and `zod` for parameter schemas. Runs on stdio transport. Tool descriptions contain the LLM-facing instructions for when/how to use each tool.
+**[src/index.ts](src/index.ts)** — MCP server wiring. Creates the server with `@modelcontextprotocol/sdk` and imports the 9 tool registrations from `src/tools/` (parameter schemas via `zod` in `src/tools/params.ts`). Runs on stdio transport. Tool descriptions contain the LLM-facing instructions for when/how to use each tool.
 
 Tools: `search_patents`, `get_patent_details`, `get_patent_claims`, `get_patent_description`, `search_in_patent_text`, `search_and_filter_fulltext`, `get_patent_family`, `get_patent_legal_status`, `get_patent_citations`.
 
 ## Key design constraints
 
 - **Pagination everywhere**: Full patent descriptions can be 50K–100K+ characters. `get_patent_claims` and `get_patent_description` always paginate via `offset`/`limit`/`max_characters`. The `search_in_patent_text` tool exists so the LLM can locate relevant paragraphs before doing expensive full reads.
-- **Family fallback**: `get_patent_claims`, `get_patent_description`, and `search_in_patent_text` have `fallback_to_family=true` by default. On a 404, `fetchWithFamilyFallback` (in `index.ts`) looks up the INPADOC family and retries against EP/WO/GB/DE/FR members in priority order using docdb format.
+- **Family fallback**: `get_patent_claims`, `get_patent_description`, and `search_in_patent_text` have `fallback_to_family=true` by default. On a 404, `fetchWithFamilyFallback` (in `src/fallback.ts`) looks up the INPADOC family and retries against EP/WO/GB/DE/FR members in priority order using docdb format.
 - **404 = no results, not an error**: `search_patents` catches `OpsApiError` with status 404 and returns `{totalCount: 0, results: []}` instead of propagating.
 - **Document number formats**: EPO OPS accepts `epodoc` (e.g. `EP1000000`), `docdb` (e.g. `EP.1000000.A1` with kind code), and `original`. Full text often requires `docdb` with an explicit kind code.
 - **Environment variables**: `PATENT_CONSUMER_KEY` and `PATENT_CONSUMER_SECRET_KEY` — the server exits immediately on startup if either is missing. Optional: `OPS_TOOL_TIMEOUT_MS` (default 55000) — total time budget per tool call. The server tracks the clock and bails with an actionable error before the MCP client timeout hits. Raise to e.g. 120000 for Claude Code or other clients with longer timeouts.
