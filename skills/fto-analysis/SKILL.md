@@ -112,7 +112,7 @@ get_patent_claims(document_number="EP1000000", max_characters=15000)
 **Important: Granted claims (B1/B2) are often not available via OPS full text.** The tool will warn you if no claims are found. In that case:
 - Try the A1/A2 (application) version — these are as-filed claims, which may be broader than granted claims
 - Use `get_patent_family` to find a WO equivalent with full text
-- For definitive granted claims, recommend the user check Espacenet web or USPTO PAIR
+- For definitive granted claims, recommend the user check Espacenet web or USPTO Patent Center
 - **Always flag in the report** when you're analyzing as-filed claims rather than granted claims
 
 Focus on **independent claims only** (typically claims 1, ~10-15, and ~20-25 depending on the patent). Independent claims define the broadest scope of protection.

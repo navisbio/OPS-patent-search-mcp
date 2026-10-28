@@ -215,8 +215,6 @@ export class EpoClient {
    * this before each attempt and bails if time is running out.
    */
   public deadline: number = Infinity;
-  /** Whether the last request failure was due to rate limiting (403/429). */
-  public wasRateLimited: boolean = false;
   /** Retry activity for the current tool call, also exposed after successful recovery. */
   public lastRetry = { attempts: 0, waitedMs: 0, rateLimitEvents: 0 };
   /** OPS cooldown persists across tool calls; startToolCall must not erase it. */
@@ -231,7 +229,6 @@ export class EpoClient {
   /** Call at the start of each tool handler to set the deadline clock. */
   startToolCall(): void {
     this.deadline = Date.now() + TOOL_TIMEOUT_MS;
-    this.wasRateLimited = false;
     this.lastPaceMs = 0;
     this.lastPaceColor = "";
     this.lastPaceService = "";
@@ -285,7 +282,6 @@ export class EpoClient {
     if (this.timeRemaining < 2_000) throw new OpsApiError(408, "Tool budget exhausted before sending an OPS request.", "TOOL_TIMEOUT");
     const cooldownMs = this.cooldownUntil - Date.now();
     if (cooldownMs > 0 && this.cooldownError) {
-      this.wasRateLimited = true;
       if (cooldownMs > MAX_AUTO_WAIT_MS || this.timeRemaining <= cooldownMs + REQUEST_TIMEOUT_MS + 2_000) {
         throw new OpsApiError(this.cooldownError.status,
           "EPO OPS is still cooling down after rate limiting. No new request was sent.",
@@ -371,7 +367,6 @@ export class EpoClient {
 
       lastStatus = resp.status;
       const isRateLimit = resp.status === 403 || resp.status === 429;
-      if (isRateLimit) this.wasRateLimited = true;
       const isRetryable = isRateLimit || resp.status >= 500;
 
       if (isRetryable) {

@@ -1,4 +1,4 @@
-import { EpoClient, OpsApiError, isOpsInterruption } from "./epo-client.js";
+import { EpoClient, OpsApiError } from "./epo-client.js";
 import { parseFamilyMembers } from "./parsers.js";
 
 /** Compute alternative kind codes to try for a document number before family fallback. */
@@ -93,7 +93,7 @@ export async function fetchWithFamilyFallback(
       const raw = await fetcher(alt, "docdb");
       return { raw, resolvedDocument: alt, substituted: true };
     } catch (e) {
-      if (isOpsInterruption(e)) throw e;
+      if (!(e instanceof OpsApiError) || e.status !== 404) throw e;
       // try next kind code
     }
   }
@@ -103,14 +103,14 @@ export async function fetchWithFamilyFallback(
   try {
     familyRaw = (await getFamilyWithFormatFallback(client, docNumber, inputFormat)).raw;
   } catch (e) {
-    if (isOpsInterruption(e)) throw e;
+    if (!(e instanceof OpsApiError) || (e.status !== 404 && !e.message.includes("smaller chunks"))) throw e;
     // Very large families (Xencor, Immunomedics) are refused with "smaller
     // chunks"; the light variant still lists members, which is all we need.
     if (e instanceof OpsApiError && e.message.includes("smaller chunks")) {
       try {
         familyRaw = (await getFamilyWithFormatFallback(client, docNumber, inputFormat, true)).raw;
       } catch (inner) {
-        if (isOpsInterruption(inner)) throw inner;
+        if (!(inner instanceof OpsApiError) || inner.status !== 404) throw inner;
         throw new OpsApiError(
           404,
           `Full text not available for ${docNumber} and could not retrieve patent family for fallback.`
@@ -148,7 +148,7 @@ export async function fetchWithFamilyFallback(
       const raw = await fetcher(docdbNum, "docdb");
       return { raw, resolvedDocument: docdbNum, substituted: true };
     } catch (e) {
-      if (isOpsInterruption(e)) throw e;
+      if (!(e instanceof OpsApiError) || e.status !== 404) throw e;
       // try next member
     }
   }
@@ -172,7 +172,7 @@ export function substitutionNote(
 ): string {
   if (empty) {
     return section === "claims"
-      ? `Full text not available for ${requested}. Attempted family member ${resolved} but it also returned no claims. Granted patent claims (B1/B2 kind codes) are often not available via OPS. Check Espacenet web or USPTO PAIR for granted claim text.`
+      ? `Full text not available for ${requested}. Attempted family member ${resolved} but it also returned no claims. Granted patent claims (B1/B2 kind codes) are often not available via OPS. Check Espacenet web or USPTO Patent Center for granted claim text.`
       : `Full text not available for ${requested}. Attempted family member ${resolved} but it also returned no description. Granted patents (B1/B2) often lack full text in OPS. Try the A1/A2 version or check Espacenet web.`;
   }
   return `Full text not available for ${requested}. Showing ${section} from family member ${resolved}.`;

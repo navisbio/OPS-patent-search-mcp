@@ -3,14 +3,14 @@ import { z } from "zod";
 import type { EpoClient } from "../epo-client.js";
 import { parseFulltextParagraphs, paginateParagraphs } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
-import { fetchWithFamilyFallback, substitutionNote } from "../fallback.js";
+import { fetchWithFamilyFallback, substitutionNote, normaliseDocNumber } from "../fallback.js";
 import { documentNumberParam, inputFormatParam, fallbackToFamilyParam } from "./params.js";
 
 type FulltextSection = "claims" | "description";
 
 const EMPTY_NOTES: Record<FulltextSection, (doc: string) => string> = {
   claims: (doc) =>
-    `No claims text found for ${doc}. Granted patent claims (B1/B2 kind codes) are often not indexed in OPS full text. Try requesting the A1/A2 (application) version instead, or use get_patent_family to find a WO equivalent. For definitive granted claims, check Espacenet web or USPTO PAIR.`,
+    `No claims text found for ${doc}. Granted patent claims (B1/B2 kind codes) are often not indexed in OPS full text. Try requesting the A1/A2 (application) version instead, or use get_patent_family to find a WO equivalent. For definitive granted claims, check Espacenet web or USPTO Patent Center.`,
   description: (doc) =>
     `No description text found for ${doc}. Granted patents (B1/B2) are often not indexed in OPS full text. Try the A1/A2 version, or use get_patent_family to find a WO equivalent.`,
 };
@@ -37,7 +37,9 @@ function registerFulltextReader(
           .int()
           .min(0)
           .default(0)
-          .describe("Paragraph index to start from (0-based). Use next_offset from previous response to continue."),
+          .describe("Paragraph index to start from (0-based). To resume, pass the response's continuation object as arguments."),
+        character_offset: z.number().int().min(0).default(0)
+          .describe("Character offset within the starting paragraph. Use continuation.character_offset when a page ends partway through a paragraph."),
         limit: z
           .number()
           .int()
@@ -54,15 +56,16 @@ function registerFulltextReader(
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ document_number, input_format, offset, limit, max_characters, fallback_to_family }) => {
+    async ({ document_number, input_format, offset, character_offset, limit, max_characters, fallback_to_family }) => {
       client.startToolCall();
       try {
+        const source = normaliseDocNumber(document_number, input_format);
         const { raw, resolvedDocument, substituted } = fallback_to_family
           ? await fetchWithFamilyFallback(client, document_number, input_format, fetcher)
-          : { raw: await fetcher(document_number, input_format), resolvedDocument: document_number, substituted: false };
+          : { raw: await fetcher(source.number, source.format), resolvedDocument: source.number, substituted: false };
 
         const paragraphs = parseFulltextParagraphs(raw);
-        const result = paginateParagraphs(paragraphs, offset, limit, max_characters);
+        const result = paginateParagraphs(paragraphs, offset, limit, max_characters, character_offset);
 
         if (substituted) {
           const note = substitutionNote(document_number, resolvedDocument, section, result.totalParagraphs === 0);
@@ -96,7 +99,7 @@ Full text is available primarily for EP, WO, and US patents. If you get a "not a
 
 When fallback_to_family is true (default), a 404 will automatically trigger a family lookup and retry against the best available EP/WO equivalent — useful when US or other national documents lack full text in OPS.
 
-Use offset/limit/max_characters to control how much text is returned. The response includes next_offset — pass it as offset in your next call to continue reading.
+Use offset/limit/max_characters to control how much text is returned. The response includes continuation: {offset, character_offset}. Pass both values in your next call to resume without losing text; null means the end.
 
 Recommended: use search_in_patent_text first to find relevant claim numbers, then read around those locations with offset.`,
     "Max characters to return (default 10000). Set higher for full claims."
@@ -120,7 +123,7 @@ When fallback_to_family is true (default), a 404 will automatically trigger a fa
 Recommended workflow:
 1. First call search_in_patent_text to find where relevant content is located
 2. Then call this with offset set to the sectionOffset from the search results (use matches where section="description")
-3. Use next_offset from the response to continue reading if needed`,
+3. Pass both values from continuation (offset and character_offset) to continue reading if needed`,
     "Max characters to return (default 10000). Increase for longer reads, decrease for overview."
   );
 }

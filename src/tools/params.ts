@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const searchTermsParam = z.array(z.string().trim().min(1, "Search terms must not be blank")).min(1);
+
 export const documentNumberParam = z
   .string()
   .describe('Patent publication number, e.g. "EP1000000"');

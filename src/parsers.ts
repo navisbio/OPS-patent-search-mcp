@@ -378,11 +378,13 @@ export function detectFulltextLanguage(json: string): { claims?: string; descrip
 /* ---------- paginated fulltext ---------- */
 
 export interface PaginatedText {
-  paragraphs: { index: number; section: string; text: string }[];
+  paragraphs: { index: number; section: string; text: string; characterOffset: number }[];
   totalParagraphs: number;
   totalCharacters: number;
   returnedCharacters: number;
   nextOffset: number | null;
+  nextCharacterOffset: number | null;
+  continuation: { offset: number; character_offset: number } | null;
   truncated: boolean;
 }
 
@@ -390,7 +392,8 @@ export function paginateParagraphs(
   paragraphs: Paragraph[],
   offset: number = 0,
   limit?: number,
-  maxCharacters?: number
+  maxCharacters?: number,
+  characterOffset = 0
 ): PaginatedText {
   const totalCharacters = paragraphs.length > 0
     ? paragraphs[paragraphs.length - 1].endChar
@@ -401,43 +404,39 @@ export function paginateParagraphs(
     ? Math.min(sliceStart + limit, paragraphs.length)
     : paragraphs.length;
 
-  const selected: { index: number; section: string; text: string }[] = [];
+  const selected: PaginatedText["paragraphs"] = [];
   let usedChars = 0;
-  let truncated = false;
-  let lastIncluded = sliceStart - 1;
+  let nextOffset = sliceStart;
+  let nextCharacterOffset = characterOffset;
 
   for (let i = sliceStart; i < sliceEnd; i++) {
     const p = paragraphs[i];
-    if (maxCharacters !== undefined && usedChars + p.text.length > maxCharacters) {
-      // Include a truncated version of this paragraph
-      const remaining = maxCharacters - usedChars;
-      if (remaining > 50) {
-        selected.push({
-          index: p.index,
-          section: p.section,
-          text: p.text.slice(0, remaining) + "…",
-        });
-        usedChars += remaining;
-      }
-      truncated = true;
-      lastIncluded = i;
+    const start = i === sliceStart ? Math.min(characterOffset, p.text.length) : 0;
+    const available = maxCharacters === undefined ? p.text.length : Math.max(0, maxCharacters - usedChars);
+    const text = p.text.slice(start, start + available);
+    if (text.length) selected.push({ index: p.index, section: p.section, text, characterOffset: start });
+    usedChars += text.length;
+    if (start + text.length < p.text.length) {
+      nextOffset = i;
+      nextCharacterOffset = start + text.length;
       break;
     }
-    selected.push({ index: p.index, section: p.section, text: p.text });
-    usedChars += p.text.length;
-    lastIncluded = i;
+    nextOffset = i + 1;
+    nextCharacterOffset = 0;
   }
 
-  const nextOffset =
-    lastIncluded + 1 < paragraphs.length ? lastIncluded + 1 : null;
+  const continuation = nextOffset < paragraphs.length
+    ? { offset: nextOffset, character_offset: nextCharacterOffset } : null;
 
   return {
     paragraphs: selected,
     totalParagraphs: paragraphs.length,
     totalCharacters,
     returnedCharacters: usedChars,
-    nextOffset,
-    truncated,
+    nextOffset: continuation?.offset ?? null,
+    nextCharacterOffset: continuation?.character_offset ?? null,
+    continuation,
+    truncated: continuation !== null,
   };
 }
 
@@ -472,6 +471,9 @@ export function searchKeywordsInParagraphs(
     sectionFilter?: string[];
   } = {}
 ): KeywordSearchResult {
+  if (!terms.length || terms.some(term => !term.trim())) {
+    throw new Error("Search terms must contain at least one non-blank keyword and no blank entries.");
+  }
   const contextChars = options.contextChars ?? 150;
   const limit = options.limit ?? 30;
   const caseSensitive = options.caseSensitive ?? false;

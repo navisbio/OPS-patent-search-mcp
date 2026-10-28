@@ -225,6 +225,7 @@ Example queries:
           try {
             raw = await client.search(pageCql, start, pageEnd);
           } catch (e) {
+            if (e instanceof OpsApiError && e.status === 404) return { pageTotal };
             if (isOpsInterruption(e)) {
               rateLimitError = e;
               continuation = { query: pageCql, range_start: start, range_end: pageEnd, auto_paginate: false };
@@ -240,7 +241,7 @@ Example queries:
               collector.push(r);
             }
           }
-          if (page.results.length === 0 || start + 100 > 2000 || collector.length >= page.totalCount) break;
+          if (page.results.length === 0 || start + 100 > 2000 || pageEnd >= page.totalCount) break;
           start += 100;
         }
         return { pageTotal };
@@ -251,6 +252,7 @@ Example queries:
       let note = "";
 
       const paginationErrors: string[] = [];
+      const coverageWarnings: string[] = [];
 
       if (grandTotal <= 2000) {
         // Simple case: single paginated sweep
@@ -262,7 +264,7 @@ Example queries:
         } else if (allResults.length < grandTotal && allResults.length >= max_results) {
           note += ` Stopped at max_results=${max_results}; increase max_results to retrieve more.`;
         } else if (allResults.length < grandTotal) {
-          note += ` The difference is due to EPO OPS deduplication — totalCount counts all family variants (WO + EP + US + JP for the same invention) while results are partially collapsed.`;
+          note += ` Fewer unique publications were retrieved than OPS reported. Coverage is incomplete or unverified; do not attribute the gap solely to family deduplication.`;
         }
       } else {
         // Year-decomposition: split query by calendar year to bypass the 2000-result cap
@@ -274,12 +276,17 @@ Example queries:
           ? parseInt(published_before.slice(0, 4))
           : currentYear;
 
+        const lowerBound = published_after?.length === 4 ? `${published_after}0101` : published_after;
+        const upperBound = published_before?.length === 4 ? `${published_before}1231` : published_before;
+        if (!published_after) coverageWarnings.push(`Year decomposition starts at ${startYear}; earlier publications were not searched. Set published_after to extend coverage.`);
         const yearCoverage: string[] = [];
         let yearError = false;
         for (let year = startYear; year <= endYear && allResults.length < max_results; year++) {
-          const yearCql = buildDateCql(query, `${year}0101`, `${year}1231`);
+          const after = lowerBound && lowerBound > `${year}0101` ? lowerBound : `${year}0101`;
+          const before = upperBound && upperBound < `${year}1231` ? upperBound : `${year}1231`;
+          const yearCql = buildDateCql(query, after, before);
           const beforeCount = allResults.length;
-          const { pageTotal: yearTotal, error } = await paginateInto(yearCql, allResults, seen, allResults.length + (max_results - allResults.length));
+          const { pageTotal: yearTotal, error } = await paginateInto(yearCql, allResults, seen, max_results);
           const fetched = allResults.length - beforeCount;
           if (error) {
             paginationErrors.push(`${year}: ${error}`);
@@ -287,6 +294,7 @@ Example queries:
             yearError = true;
             break; // Stop year loop — API is likely throttled
           }
+          if (yearTotal > 2000) coverageWarnings.push(`${year} exceeds the 2000-result per-query limit; narrow the date range further.`);
           if (yearTotal > 0) {
             yearCoverage.push(
               yearTotal > 2000
@@ -303,7 +311,7 @@ Example queries:
         } else if (allResults.length < grandTotal && allResults.length >= max_results) {
           note += ` Stopped at max_results=${max_results}; increase max_results to retrieve more.`;
         } else if (allResults.length < grandTotal) {
-          note += ` The gap between totalCount and fetched is due to EPO OPS deduplication of family variants.`;
+          note += ` Coverage is incomplete or unverified. Date-window limits, per-year caps and deduplication can all reduce the retrieved count.`;
         }
       }
 
@@ -321,6 +329,11 @@ Example queries:
         ...(rateLimitError && { ...interruptionMetadata(rateLimitError), continuation,
           continuationNote: "Resume search_patents with these continuation arguments and the same detail_level. For queries split by year, this covers the interrupted year only; subsequent years still require review." }),
         ...(fullDetailCapNote && { fullDetailCapNote }),
+        ...(coverageWarnings.length > 0 && { coverageWarnings }),
+        ...((allResults.length < grandTotal || coverageWarnings.length > 0) && {
+          partial: true, partialSample: true,
+          sampleWarning: "Statistics describe only the retrieved publications; complete coverage has not been established.",
+        }),
         ...(paginationErrors.length > 0 && {
           partial: true,
           paginationErrors,

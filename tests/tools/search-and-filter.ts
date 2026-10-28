@@ -9,6 +9,7 @@ export const testSearchAndFilter: ToolTestSuite = async (_client, test) => {
       query: 'ta="CRISPR"',
       filter_terms: ["Cas9"],
       section_filter: ["claims"],
+      published_after: "20150101",
       published_before: "20190101",
       max_patents_to_scan: 3,
       max_snippets_per_patent: 1,
@@ -19,6 +20,7 @@ export const testSearchAndFilter: ToolTestSuite = async (_client, test) => {
       if (!Array.isArray(data.matched)) return "Missing matched array";
       if (!Array.isArray(data.skipped)) return "Missing skipped array";
       if (data.scanned > 3) return `scanned ${data.scanned} exceeds max_patents_to_scan=3`;
+      if (!data.query.includes('pd within "20150101,20190101"')) return "Date range was not retained";
       // Every returned patent must actually carry a hit for a requested term.
       for (const m of data.matched) {
         if (!m.termsFound?.length) return `${m.publicationNumber} returned with no termsFound`;
