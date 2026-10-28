@@ -193,7 +193,7 @@ Run `npm install` and `npm run build` first when testing source changes. `.mcp.j
 
 Run `npm run check`, `npm run test:unit`, `python3 smoketest/test-codex.py`,
 `npm run release:check`, `npm audit --omit=dev`, and the live `npm test` with
-credentials. CI runs the offline checks on Node.js 22, 24 and 26.
+credentials.
 
 Keep `package.json`, `package-lock.json`, `manifest.json` and
 `.claude-plugin/plugin.json` at the same version; the server version advertised over MCP is
