@@ -27,7 +27,7 @@ report() { echo "  ✗ $1" >&2; fail=1; }
 
 # ── 1. Paths that must never be committed ────────────────────────────────────
 # .claude-plugin/ is intentionally absent: it ships with the plugin.
-BLOCKED_PATHS='(^|/)\.env($|\.)|(^|/)\.claude/|(^|/)\.beads/|(^|/)\.dolt/|(^|/)\.conductor/|(^|/)\.cursor/|(^|/)\.idea/|(^|/)\.vscode/|(^|/)\.npmrc$|(^|/)\.netrc$|^docs/|^smoketest/results/|\.mcpb$|\.pem$|\.key$|\.p12$|\.pfx$|\.jsonl$|\.db$|\.sqlite3?$|(^|/)\.DS_Store$|\.local$'
+BLOCKED_PATHS='(^|/)\.env($|\.)|(^|/)\.claude/|(^|/)\.beads/|(^|/)\.dolt/|(^|/)\.conductor/|(^|/)\.cursor/|(^|/)\.idea/|(^|/)\.vscode/|(^|/)\.npmrc$|(^|/)\.netrc$|^docs/|^dist/|^server/|^smoketest/results/|\.mcpb$|\.pem$|\.key$|\.p12$|\.pfx$|\.jsonl$|\.db$|\.sqlite3?$|(^|/)\.DS_Store$|\.local$'
 
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue

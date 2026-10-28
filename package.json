@@ -1,6 +1,6 @@
 {
   "name": "ops-patent-search",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Unofficial MCP server for exploring patents via the EPO Open Patent Services (OPS) API. Not affiliated with the EPO. An exploratory tool for Claude Desktop and other MCP clients — not a substitute for specialised patent search platforms.",
   "main": "dist/index.js",
   "bin": {
@@ -18,10 +18,13 @@
     "prepublishOnly": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "test": "npx tsx tests/integration.ts",
-    "test:unit": "tsx --test tests/unit/*.ts",
-    "test:integration": "npx tsx tests/integration.ts",
-    "test:scenarios": "npx tsx integration_tests/run-all.ts"
+    "test": "node --import tsx tests/integration.ts",
+    "test:unit": "node --import tsx --test tests/unit/*.ts",
+    "test:integration": "node --import tsx tests/integration.ts",
+    "test:scenarios": "node --import tsx integration_tests/run-all.ts",
+    "prepack": "npm run build",
+    "check": "tsc --noEmit --noUnusedLocals --noUnusedParameters",
+    "release:check": "npm run build && npm run bundle && node scripts/check-release.mjs"
   },
   "keywords": [
     "mcp",

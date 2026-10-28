@@ -6,7 +6,7 @@
  *   npx tsx integration_tests/run-all.ts pembrolizumab   # filter by name
  */
 
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import { readdirSync } from "fs";
 import { resolve } from "path";
 
@@ -38,7 +38,7 @@ for (let i = 0; i < scenarios.length; i++) {
 
   const path = resolve(dir, scenarios[i]);
   try {
-    execSync(`npx tsx "${path}"`, {
+    execFileSync(process.execPath, ["--import", "tsx", path], {
       stdio: "inherit",
       env: process.env,
     });

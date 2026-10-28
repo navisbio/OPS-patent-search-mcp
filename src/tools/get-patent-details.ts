@@ -3,6 +3,7 @@ import { z } from "zod";
 import { EpoClient, OpsApiError, isOpsInterruption } from "../epo-client.js";
 import { parseBiblio, type PatentBiblio } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
+import { normaliseDocNumber } from "../fallback.js";
 
 export function registerGetPatentDetails(server: McpServer, client: EpoClient) {
   const { errorResult, jsonResult } = createHelpers(client);
@@ -61,10 +62,7 @@ Batch mode: pass document_numbers (array of up to 100 numbers) to retrieve multi
     const baseNumber = (s: string) => s.replace(/[^A-Za-z0-9]/g, "").toUpperCase().replace(/(?<=\d)[A-Z]\d?$/, "");
     // Citation lists and family members carry kind suffixes ("US7169874B2"),
     // which the epodoc endpoint rejects. Route those through docdb instead.
-    const normalise = (n: string): { number: string; format: string } => {
-      const m = input_format === "epodoc" ? n.trim().match(/^([A-Z]{2})(\d+)([A-Z]\d?)$/) : null;
-      return m ? { number: `${m[1]}.${m[2]}.${m[3]}`, format: "docdb" } : { number: n.trim(), format: input_format };
-    };
+    const normalise = (n: string) => normaliseDocNumber(n, input_format);
     const fetchOne = async (n: string, fmt: string): Promise<PatentBiblio[]> => {
       try { return parseBiblio(await client.getBiblio(n, fmt)).filter((b) => !isStub(b)); } catch (e) { if (isOpsInterruption(e)) throw e; return []; }
     };

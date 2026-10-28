@@ -6,7 +6,7 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { resolve } from "path";
+import { bundlePath } from "./setup.js";
 
 export const TEST_PATENT = "EP3750919"; // Referenced in code examples — CRISPR-related
 export const TEST_SEARCH_QUERY = 'ta="CRISPR" AND pa="Broad*" AND pd>=2018';
@@ -95,8 +95,6 @@ export async function connectClient(): Promise<Client> {
     console.error("❌  Missing PATENT_CONSUMER_KEY or PATENT_CONSUMER_SECRET_KEY env vars");
     process.exit(1);
   }
-
-  const bundlePath = resolve(__dirname, "../server/bundle.cjs");
 
   const transport = new StdioClientTransport({
     command: "node",

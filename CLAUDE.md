@@ -22,7 +22,7 @@ This is an MCP server published as `ops-patent-search` on npm. Core modules live
 **[src/parsers.ts](src/parsers.ts)** — Transforms deeply nested/inconsistent OPS JSON into clean typed objects. Key exports:
 - `parseSearchResults` / `parseBiblio` / `parseFamilyMembers` — structured metadata
 - `parseFulltextParagraphs` — converts claims/description JSON into `Paragraph[]` with character offsets (`startChar`/`endChar`) for positional navigation
-- `paginateParagraphs` — slices a paragraph array by offset+limit+maxCharacters, returns `nextOffset` for continuation
+- `paginateParagraphs` — slices a paragraph array by offset+limit+maxCharacters, returns `continuation: {offset, character_offset}` so partial paragraphs can be resumed without losing text
 - `searchKeywordsInParagraphs` — regex-based keyword search across paragraphs, returns snippets with `paragraphIndex` usable as `offset` in the reading tools
 
 **[src/index.ts](src/index.ts)** — MCP server wiring. Creates the server with `@modelcontextprotocol/sdk` and imports the 9 tool registrations from `src/tools/` (parameter schemas via `zod` in `src/tools/params.ts`). Runs on stdio transport. Tool descriptions contain the LLM-facing instructions for when/how to use each tool.
@@ -58,6 +58,8 @@ bd close <id>         # Complete work
 - Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+- Keep beads data local. Never sync it to this public Git remote. A separate private remote must be explicitly configured and approved before any beads sync.
+- Make implementation changes on a separate branch and submit a PR; do not push changes directly to main.
 
 ## Session Completion
 
@@ -71,7 +73,6 @@ bd close <id>         # Complete work
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```

@@ -17,12 +17,29 @@ For exhaustive patent landscape analysis, systematic FTO assessments, or large-s
 | `search_in_patent_text` | Keyword search within claims + description. Returns snippets with paragraph indexes for targeted reading. |
 | `search_and_filter_fulltext` | Search, then keep only the hits whose claims or description actually contain your terms. One call instead of a search plus one full-text call per hit. |
 | `get_patent_family` | INPADOC patent family members across jurisdictions. |
-| `get_patent_legal_status` | Grant, opposition, lapse, withdrawal events. Determines whether a patent is in force. |
+| `get_patent_legal_status` | Grant, opposition, lapse and withdrawal events, with a qualified status summary. Verify current rights with the relevant register. |
 | `get_patent_citations` | Backward citations (prior art) split into patent and non-patent literature. |
 
 ## Setup
 
 Requires Node.js 22 or newer.
+
+### Claude Desktop bundle
+
+Download the `.mcpb` asset from a [GitHub release](https://github.com/navisbio/OPS-patent-search-mcp/releases) that includes one, open it in Claude Desktop, and enter your EPO OPS Consumer Key and Secret when prompted. Version 1.1.2 introduces the downloadable bundle; older releases may have no attachment.
+
+### Claude Code plugin
+
+Set `PATENT_CONSUMER_KEY` and `PATENT_CONSUMER_SECRET_KEY` in the environment used to launch Claude Code, then run:
+
+```text
+/plugin marketplace add navisbio/OPS-patent-search-mcp
+/plugin install ops-patent-search@ops-patent-search
+```
+
+The plugin includes the workflow skills below. Its launcher uses a local build when available; a fresh marketplace installation starts the matching published npm version automatically. Node.js and npm must be on your PATH. See the [Claude Code installation documentation](https://code.claude.com/docs/en/discover-plugins) for install scopes.
+
+### Other MCP clients / manual configuration
 
 1. Register at [developers.epo.org](https://developers.epo.org/) for a Consumer Key and Secret (free tier available).
 
@@ -124,18 +141,33 @@ and receive metadata in a separate MCP text content block.
 
 Text searches with `section_filter` retrieve only the requested sections.
 
+Text-search responses include `sectionStatus` for each requested section, with
+availability, errors, language and the actual source publication. A missing,
+empty or failed section is unknown. Filters distinguish `matched`, `nonMatches`
+and `unknown`; `checked` counts documents with any readable text, while
+`fullyChecked` counts those with every requested section. A family substitution
+does not establish the original publication's claim scope. `remainingDocuments`
+lists selected candidates to revisit after interrupted retrieval.
+
+Full-text readers return `continuation: {offset, character_offset}`. Pass both
+values into the next call to resume, including the unread part of a paragraph.
+`continuation: null` means the end; `nextOffset` and `nextCharacterOffset` also
+expose the cursor separately.
+
 ### Commands
 
 ```bash
 npm install
 npm run build              # Compile TypeScript → dist/
+npm run check              # Type checking and unused-code checks
 npm run test:unit          # Offline regression tests (no credentials needed)
-npm test                   # Integration tests (requires PATENT_CONSUMER_KEY and PATENT_CONSUMER_SECRET_KEY in .env)
+npm test                   # Rebuild bundle, load .env, then run live integration tests
+npm run release:check      # Build both entry points, check metadata, startup and package contents
 ```
 
 **Workflow integration tests** (live API, deterministic assertions on multi-tool workflows):
 ```bash
-npx tsx integration_tests/run-all.ts
+npm run test:scenarios
 ```
 
 **Agent bench** (an AI agent works through realistic patent tasks against the live API, and the result is graded):
@@ -155,7 +187,28 @@ The critique is a bug-report generator, not the measure of quality. Three things
 claude --plugin-dir /path/to/ops-patent-search
 ```
 
-`.mcp.json` is the *plugin* server manifest: its `${CLAUDE_PLUGIN_ROOT}` path is only expanded when the server is loaded as a plugin. Enabling it as a plain project MCP server instead leaves the variable unexpanded and the server exits with `Cannot find module '.../${CLAUDE_PLUGIN_ROOT}/dist/index.js'`. Use `--plugin-dir` as above, or register a separate absolute-path server with `claude mcp add`.
+Run `npm install` and `npm run build` first when testing source changes. `.mcp.json` is the *plugin* server manifest: its `${CLAUDE_PLUGIN_ROOT}` path is only expanded when loaded as a plugin. Use `--plugin-dir` as above, or register a separate absolute-path server with `claude mcp add`.
+
+### Release preparation
+
+Run `npm run check`, `npm run test:unit`, `python3 smoketest/test-codex.py`,
+`npm run release:check`, `npm audit --omit=dev`, and the live `npm test` with
+credentials. CI runs the offline checks on Node.js 22, 24 and 26.
+
+Keep `package.json`, `package-lock.json`, `manifest.json` and
+`.claude-plugin/plugin.json` at the same version; the server version advertised over MCP is
+read from `package.json`. Build the npm tarball with `npm pack` and create the
+desktop archive after `npm run bundle` with:
+
+```bash
+mcpb pack . /path/to/ops-patent-search-1.1.2.mcpb
+```
+
+Inspect both archives before publishing. The npm package ships only `dist/`,
+package metadata, the README and license; `.mcpbignore` allowlists desktop
+bundle contents. Publish and verify the exact npm version before making the
+matching plugin release available, then attach its `.mcpb` to the GitHub release.
+Installation on a fresh machine must not depend on this repository's local build.
 
 ## Privacy
 

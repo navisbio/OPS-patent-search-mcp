@@ -1,10 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { type EpoClient, type OpsApiError, isOpsInterruption, interruptionMetadata } from "../epo-client.js";
-import { parseFulltextParagraphs, searchKeywordsInParagraphs, detectFulltextLanguage } from "../parsers.js";
+import { type EpoClient, interruptionDetails, interruptionMetadata } from "../epo-client.js";
+import { searchKeywordsInParagraphs } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
-import { fetchWithFamilyFallback } from "../fallback.js";
-import { documentNumberParam, inputFormatParam, fallbackToFamilyParam } from "./params.js";
+import { retrieveTextSections } from "../text-retrieval.js";
+import { documentNumberParam, inputFormatParam, fallbackToFamilyParam, searchTermsParam } from "./params.js";
 
 export function registerSearchInPatentText(server: McpServer, client: EpoClient) {
   const { errorResult, jsonResult } = createHelpers(client);
@@ -25,9 +25,7 @@ When fallback_to_family is true (default), a 404 will automatically try EP/WO fa
 Full text is available primarily for EP, WO, and US patents.`,
     inputSchema: {
       document_number: documentNumberParam,
-      search_terms: z
-        .array(z.string())
-        .min(1)
+      search_terms: searchTermsParam
         .describe('Keywords to search for, e.g. ["kinase", "inhibitor", "pharmaceutical"]'),
       input_format: inputFormatParam,
       context_chars: z
@@ -69,60 +67,13 @@ Full text is available primarily for EP, WO, and US patents.`,
   }) => {
     client.startToolCall();
     try {
-      // Resolve the best available document for fulltext
-      let resolvedClaimsDoc = document_number;
-      let resolvedDescDoc = document_number;
-      let substituted = false;
-
-      // Fetch only requested sections so excluded sections cannot invalidate results.
-      let claimsRaw: string | null = null;
-      let descRaw: string | null = null;
-      let rateLimitError: OpsApiError | undefined;
-
-      const sections = section_filter ?? ["claims", "description"];
-      for (const section of ["claims", "description"] as const) {
-        if (!sections.includes(section) || rateLimitError) continue;
-        // Prefer the resolved claims document when retrieving description.
-        const doc: string = section === "description" && substituted ? resolvedClaimsDoc : document_number;
-        const format: string = section === "description" && substituted ? "docdb" : input_format;
-        const fetchSection = (d: string, f: string) => section === "claims"
-          ? client.getClaims(d, f) : client.getDescription(d, f);
-        try {
-          const result = fallback_to_family
-            ? await fetchWithFamilyFallback(client, doc, format, fetchSection)
-            : { raw: await fetchSection(doc, format), resolvedDocument: doc, substituted: false };
-          if (section === "claims") {
-            claimsRaw = result.raw;
-            resolvedClaimsDoc = result.resolvedDocument;
-          } else {
-            descRaw = result.raw;
-            resolvedDescDoc = result.resolvedDocument;
-          }
-          substituted ||= result.substituted;
-        } catch (e) {
-          if (isOpsInterruption(e)) rateLimitError = e;
-          // Unavailable text may still leave the other requested section searchable.
-        }
+      const retrieval = await retrieveTextSections(client, document_number, input_format,
+        section_filter ?? ["claims", "description"], fallback_to_family);
+      const { paragraphs: allParagraphs, claimsCount, interruption: rateLimitError,
+        sectionStatus, textLanguage, resolvedDocuments, substituted } = retrieval;
+      if (!allParagraphs.length && rateLimitError) {
+        return { ...jsonResult({ ...interruptionDetails(rateLimitError), sectionStatus }), isError: true };
       }
-
-      if (!claimsRaw && !descRaw) {
-        if (rateLimitError) return errorResult(rateLimitError);
-        return {
-          content: [{
-            type: "text" as const,
-            text: `No full text available for ${document_number}. Full text is only available for EP, WO, US and some other offices. Try docdb format with a kind code (e.g. "EP.1000000.A1"), or enable fallback_to_family to search a family equivalent automatically.`,
-          }],
-          isError: true,
-        };
-      }
-
-      const claimsParagraphs = claimsRaw ? parseFulltextParagraphs(claimsRaw) : [];
-      const descParagraphs = descRaw ? parseFulltextParagraphs(descRaw) : [];
-      const claimsCount = claimsParagraphs.length;
-      const allParagraphs = [...claimsParagraphs, ...descParagraphs];
-
-      let idx = 0;
-      for (const p of allParagraphs) p.index = idx++;
 
       const searchResult = searchKeywordsInParagraphs(allParagraphs, search_terms, {
         contextChars: context_chars,
@@ -140,19 +91,18 @@ Full text is available primarily for EP, WO, and US patents.`,
       const totalChars =
         allParagraphs.length > 0 ? allParagraphs[allParagraphs.length - 1].endChar : 0;
 
-      const textLanguage = {
-        ...(claimsRaw && { claims: detectFulltextLanguage(claimsRaw).claims }),
-        ...(descRaw && { description: detectFulltextLanguage(descRaw).description }),
-      };
       const nonEnglish = Object.values(textLanguage).some((l) => l && l !== "en");
       const result: Record<string, unknown> = {
         documentNumber: document_number,
         searchTerms: search_terms,
-        ...(rateLimitError && { partial: true, ...interruptionMetadata(rateLimitError) }),
+        ...(!retrieval.complete && { partial: true }),
+        ...(rateLimitError && interruptionMetadata(rateLimitError)),
+        sectionStatus,
+        sectionsChecked: Object.keys(sectionStatus).filter(section => sectionStatus[section as keyof typeof sectionStatus]?.status === "available"),
         textLanguage,
         totalParagraphs: allParagraphs.length,
         claimsParagraphs: claimsCount,
-        descriptionParagraphs: descParagraphs.length,
+        descriptionParagraphs: allParagraphs.length - claimsCount,
         totalCharacters: totalChars,
         totalMatchCount: searchResult.totalMatchCount,
         matchCountByKeyword: searchResult.matchCountByKeyword,
@@ -163,6 +113,8 @@ Full text is available primarily for EP, WO, and US patents.`,
         hint:
           rateLimitError
             ? "OPS request limits interrupted text retrieval. Matches cover only the retrieved text; unavailable sections are unknown, not absent. Wait before retrying."
+            : !retrieval.complete
+            ? `Only retrieved text was searched (${allParagraphs.length} paragraphs, ${searchResult.totalMatchCount} matches). Missing, empty or failed sections are unknown, not evidence of absence; see sectionStatus.`
             : enrichedMatches.length > 0
             ? `Found ${searchResult.totalMatchCount} total matches (showing ${enrichedMatches.length}). Use each match's 'sectionOffset' as the 'offset' parameter with get_patent_claims (if section=claims) or get_patent_description (if section=description) to read full text around that match.`
             : nonEnglish
@@ -171,15 +123,12 @@ Full text is available primarily for EP, WO, and US patents.`,
       };
 
       if (substituted) {
-        result.resolvedDocuments = {
-          ...(claimsRaw && { claims: resolvedClaimsDoc }),
-          ...(descRaw && { description: resolvedDescDoc }),
-        };
+        result.resolvedDocuments = resolvedDocuments;
         result.note = `Full text not available for ${document_number}. Search performed against family member(s): ${Object.entries(result.resolvedDocuments as Record<string, string>).map(([section, doc]) => `${section} from ${doc}`).join(", ")}.`;
       }
 
       const response = jsonResult(result, { grounding: true });
-      return rateLimitError ? { ...response, isError: true } : response;
+      return retrieval.retrievalError !== undefined || !allParagraphs.length ? { ...response, isError: true } : response;
     } catch (e) {
       return errorResult(e);
     }

@@ -7,7 +7,7 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { resolve } from "path";
+import { bundlePath } from "../tests/setup.js";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                               */
@@ -68,8 +68,6 @@ export async function runScenario(
     console.error("❌  Missing PATENT_CONSUMER_KEY or PATENT_CONSUMER_SECRET_KEY");
     process.exit(1);
   }
-
-  const bundlePath = resolve(__dirname, "../server/bundle.cjs");
 
   console.log(`\n${"═".repeat(78)}`);
   console.log(`  ${scenarioName}`);
@@ -154,6 +152,7 @@ export async function runScenario(
   }
 
   if (failed > 0) {
+    process.exitCode = 1;
     console.log("\nFailures:");
     for (const r of results.filter((r) => !r.passed)) {
       console.log(`  ❌ ${r.name}: ${r.error}`);

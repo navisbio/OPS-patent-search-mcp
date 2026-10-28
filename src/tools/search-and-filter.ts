@@ -1,10 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { type EpoClient, type OpsApiError, isOpsInterruption, interruptionMetadata } from "../epo-client.js";
-import { parseSearchResults, parseFulltextParagraphs, searchKeywordsInParagraphs } from "../parsers.js";
+import { type EpoClient, type OpsApiError, interruptionMetadata } from "../epo-client.js";
+import { parseSearchResults, searchKeywordsInParagraphs } from "../parsers.js";
 import { createHelpers } from "../helpers.js";
-import { fetchWithFamilyFallback } from "../fallback.js";
-import { fallbackToFamilyParam } from "./params.js";
+import { retrieveTextSections } from "../text-retrieval.js";
+import { fallbackToFamilyParam, searchTermsParam } from "./params.js";
 import { buildDateCql } from "../search.js";
 
 export function registerSearchAndFilterFulltext(server: McpServer, client: EpoClient) {
@@ -28,9 +28,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
       query: z
         .string()
         .describe('CQL query, e.g. ta="CRISPR" AND pd>=2020'),
-      filter_terms: z
-        .array(z.string())
-        .min(1)
+      filter_terms: searchTermsParam
         .describe('Terms that must appear in the full text, e.g. ["guide RNA", "Cas9"]'),
       match_mode: z
         .enum(["any", "all"])
@@ -38,6 +36,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         .describe('"any" keeps a patent if any term appears (default); "all" requires every term.'),
       section_filter: z
         .array(z.enum(["claims", "description"]))
+        .min(1)
         .optional()
         .describe('Restrict the text check to a section, e.g. ["claims"]. Omit to check both.'),
       max_patents_to_scan: z
@@ -94,7 +93,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
     try {
       const cql = buildDateCql(query, published_after, published_before);
 
-      // Fetch a wider window than we will scan. OPS orders results by relevance,
+      // Fetch a wider window than we will scan. OPS returns newest publications first,
       // and the top of that list is often CN/JP/KR or very recent WO documents
       // that have no full text indexed — scanning those wastes the whole budget
       // on skips. Over-fetch, then prefer the ones that plausibly have text.
@@ -114,7 +113,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         });
       }
 
-      // Stable partition: keep relevance order inside each group.
+      // Stable partition: keep OPS order inside each group.
       const likely = results.filter((r) => r.fulltextLikely !== false);
       const unlikely = results.filter((r) => r.fulltextLikely === false);
       const ordered = [...likely, ...unlikely];
@@ -127,6 +126,12 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
       const RESERVE_MS = 8_000;
       let scanned = 0;
       let checked = 0;
+      let fullyChecked = 0;
+      let incompleteCount = 0;
+      let retrievalFailed = false;
+      let remainingDocuments: string[] = [];
+      const unknown: Record<string, unknown>[] = [];
+      const nonMatches: Record<string, unknown>[] = [];
       let truncated = false;
       let rateLimitError: OpsApiError | undefined;
       let interruptedDocument: string | undefined;
@@ -139,71 +144,28 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
         scanned++;
         const doc = item.publicationNumber;
 
-        let claimsRaw: string | null = null;
-        let descRaw: string | null = null;
-        let substitutedFrom: string | undefined;
-
-        const wantClaims = !section_filter || section_filter.includes("claims");
-        const wantDesc = !section_filter || section_filter.includes("description");
-
-        if (wantClaims) {
-          try {
-            if (fallback_to_family) {
-              const r = await fetchWithFamilyFallback(client, doc, "epodoc", (d, f) => client.getClaims(d, f));
-              claimsRaw = r.raw;
-              if (r.substituted) substitutedFrom = r.resolvedDocument;
-            } else {
-              claimsRaw = await client.getClaims(doc, "epodoc");
-            }
-          } catch (e) {
-            if (isOpsInterruption(e)) {
-              rateLimitError = e;
-              interruptedDocument = doc;
-              truncated = true;
-              break;
-            }
-            // no claims for this document
-          }
+        const retrieval = await retrieveTextSections(client, doc, "epodoc",
+          section_filter ?? ["claims", "description"], fallback_to_family, RESERVE_MS);
+        const allParagraphs = retrieval.paragraphs;
+        if (allParagraphs.length) checked++;
+        if (retrieval.complete) fullyChecked++;
+        else incompleteCount++;
+        if (retrieval.stopped) {
+          truncated = true;
+          interruptedDocument = doc;
+          remainingDocuments = candidates.slice(scanned - 1).map(item => item.publicationNumber);
+          rateLimitError = retrieval.interruption;
+          retrievalFailed = retrieval.retrievalError !== undefined;
         }
-
-        if (wantDesc && client.timeRemaining >= RESERVE_MS) {
-          try {
-            const srcDoc = substitutedFrom ?? doc;
-            const srcFmt = substitutedFrom ? "docdb" : "epodoc";
-            if (fallback_to_family) {
-              const r = await fetchWithFamilyFallback(client, srcDoc, srcFmt, (d, f) => client.getDescription(d, f));
-              descRaw = r.raw;
-              if (r.substituted) substitutedFrom = r.resolvedDocument;
-            } else {
-              descRaw = await client.getDescription(srcDoc, srcFmt);
-            }
-          } catch (e) {
-            if (isOpsInterruption(e)) {
-              rateLimitError = e;
-              interruptedDocument = doc;
-              truncated = true;
-              // Check any claims already retrieved before returning partial results.
-            }
-            // no description for this document
-          }
-        }
-
-        if (!claimsRaw && !descRaw) {
-          if (rateLimitError) break;
-          skipped.push({
-            publicationNumber: doc,
-            title: item.title,
-            reason: "no full text available in OPS (not indexed for this office/kind code)",
-          });
-          continue;
-        }
-
-        const claimsParagraphs = claimsRaw ? parseFulltextParagraphs(claimsRaw) : [];
-        const descParagraphs = descRaw ? parseFulltextParagraphs(descRaw) : [];
-        const allParagraphs = [...claimsParagraphs, ...descParagraphs];
-        if (allParagraphs.length > 0) checked++;
-        let idx = 0;
-        for (const p of allParagraphs) p.index = idx++;
+        const evidence = {
+          publicationNumber: doc, title: item.title,
+          sectionStatus: retrieval.sectionStatus,
+          resolvedDocuments: retrieval.resolvedDocuments,
+          textLanguage: retrieval.textLanguage,
+          ...(retrieval.substituted && {
+            note: `Results cover family text: ${Object.entries(retrieval.resolvedDocuments).map(([section, source]) => `${section} from ${source}`).join(", ")}. They do not establish the requested publication's claim scope or the absence of terms in it.`,
+          }),
+        };
 
         const found = searchKeywordsInParagraphs(allParagraphs, filter_terms, {
           contextChars: context_chars,
@@ -221,14 +183,19 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
             : termsHit.length > 0;
 
         if (!keep) {
-          if (rateLimitError) break;
+          if (retrieval.complete) nonMatches.push(evidence);
+          else unknown.push(evidence);
+          if (!allParagraphs.length && !retrieval.stopped) skipped.push({
+            publicationNumber: doc, title: item.title,
+            reason: "No readable text was available; contents are unknown. See unknown[].sectionStatus.",
+          });
+          if (retrieval.stopped) break;
           continue;
         }
 
-        const claimsCount = claimsParagraphs.length;
+        const claimsCount = retrieval.claimsCount;
         const entry: Record<string, unknown> = {
-          publicationNumber: doc,
-          title: item.title,
+          ...evidence,
           applicants: item.applicants,
           publicationDate: item.publicationDate,
           termsFound: termsHit,
@@ -240,18 +207,18 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
               m.section === "claims" ? m.paragraphIndex : m.paragraphIndex - claimsCount,
           })),
         };
-        if (substitutedFrom) {
-          entry.note = `Full text taken from family member ${substitutedFrom}.`;
-        }
-        if (rateLimitError) entry.partial = true;
+        if (!retrieval.complete) entry.partial = true;
         matched.push(entry);
-        if (rateLimitError) break;
+        if (retrieval.stopped) break;
+      }
+      if (truncated && !remainingDocuments.length) {
+        remainingDocuments = candidates.slice(scanned).map(item => item.publicationNumber);
       }
 
       const notes: string[] = [];
       if (truncated) {
         notes.push(
-          `Stopped after ${scanned} of ${candidates.length} patents to stay inside the tool time budget. Re-run with a narrower query or a smaller max_patents_to_scan. Follow any retryAfterSeconds before resuming.`
+          `Stopped after ${scanned} of ${candidates.length} patents because retrieval stopped or the tool time budget ran out. Re-run with a narrower query or a smaller max_patents_to_scan. Follow any retryAfterSeconds before resuming.`
         );
       }
       if (totalCount > candidates.length) {
@@ -266,7 +233,7 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
       }
       if (skipped.length > 0) {
         notes.push(
-          `${skipped.length} patent(s) had no full text in OPS and were not checked — see "skipped". Their contents are unknown, not absent.`
+          `${skipped.length} patent(s) had no readable text and were not checked — see "skipped" and "unknown". Their contents are unknown, not absent.`
         );
       }
 
@@ -276,31 +243,36 @@ Full text exists mainly for EP, WO and US. Patents without it are reported under
           totalCount,
           scanned,
           checked,
+          fullyChecked,
+          unknownCount: unknown.length,
+          unknown,
+          noMatchCount: nonMatches.length,
+          nonMatches,
+          unattemptedCount: candidates.length - scanned,
+          unexaminedCount: Math.max(0, totalCount - scanned),
           truncated,
+          ...((truncated || incompleteCount > 0) && { partial: true }),
+          ...(remainingDocuments.length > 0 && {
+            remainingDocuments,
+            resumeHint: "Use search_in_patent_text on remainingDocuments with the same terms and sections. Rerunning this filter starts over.",
+          }),
           ...(rateLimitError && {
             partial: true,
             ...interruptionMetadata(rateLimitError),
             interruptedDocument,
-            remainingDocuments: candidates.slice(scanned - 1).map(item => item.publicationNumber),
-            resumeHint: "Use search_in_patent_text on remainingDocuments with the same terms and sections. This tool has no scan-offset parameter; rerunning it starts over.",
           }),
           matchMode: match_mode,
-          sectionsChecked: section_filter ?? ["claims", "description"],
+          sectionsRequested: section_filter ?? ["claims", "description"],
           filterTerms: filter_terms,
           matchedCount: matched.length,
           matched,
           skipped,
           ...(notes.length > 0 ? { notes } : {}),
-          hint:
-            rateLimitError
-              ? `OPS request limits interrupted retrieval for ${interruptedDocument}. Preserved ${matched.length} matches from retrieved text. The interrupted document and remaining candidates are unknown, not negative results. Wait before retrying.`
-              : matched.length > 0
-              ? `${matched.length} of ${scanned} scanned patents contain the terms. Use a snippet's sectionOffset as the offset for get_patent_claims (section=claims) or get_patent_description (section=description) to read further.`
-              : `None of the ${scanned} scanned patents contained ${match_mode === "all" ? "all of" : "any of"} the terms. Try match_mode="any", broader terms, or drop section_filter.`,
+          hint: `${matched.length} publications matched the retrieved text; ${nonMatches.length} had no keyword match across all requested sections. ${unknown.length} attempted publications remain unknown, and ${candidates.length - scanned} selected candidates were not attempted. Missing or failed text does not establish absence. See sectionStatus and resolvedDocuments for coverage and source publications.`,
         },
         { grounding: true }
       );
-      return rateLimitError ? { ...response, isError: true } : response;
+      return rateLimitError || retrievalFailed ? { ...response, isError: true } : response;
     } catch (e) {
       return errorResult(e);
     }

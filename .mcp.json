@@ -2,7 +2,7 @@
   "mcpServers": {
     "ops-patent-search": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/start-plugin.cjs"],
       "env": {
         "PATENT_CONSUMER_KEY": "${PATENT_CONSUMER_KEY}",
         "PATENT_CONSUMER_SECRET_KEY": "${PATENT_CONSUMER_SECRET_KEY}"
